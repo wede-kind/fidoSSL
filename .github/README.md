@@ -75,7 +75,8 @@ sudo apt install build-essential libssl-dev libfido2-dev libtinycbor-dev  libjan
    sudo make install
    ```
 
-   **Note on Manual Linking**: If you prefer not to install `fidoSSL` globally or need to use it in a specific project without affecting the system-wide configuration, you can directly reference the library and header files in your compilation command. The compiled library can be found under `fidoSSL/build/libfidossl.a`.
+
+**Note on Manual Linking**: If you prefer not to install `fidoSSL` globally or need to use it in a specific project without affecting the system-wide configuration, you can directly reference the library and header files in your compilation command. The compiled library can be found under `fidoSSL/build/libfidossl.a`.
 
 #### Compiling Your Application with fidoSSL
 
@@ -117,21 +118,19 @@ SSL_CTX *ctx;
 
 // Set the minimum protocol version to TLS 1.3
 if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
-    printf("Failed to set TLS version 1.3\n");
-    exit(EXIT_FAILURE);
+    // Handle error
 }
 
 // Load the client certificate and private key
 if (SSL_CTX_use_certificate_file(ctx, "/path/to/client.crt", SSL_FILETYPE_PEM) <= 0 ||
     SSL_CTX_use_PrivateKey_file(ctx, "/path/to/client.key", SSL_FILETYPE_PEM) <= 0) {
-    ERR_print_errors_fp(stderr);
-    exit(EXIT_FAILURE);
+    // Handle error
 }
 
 // Prepare FIDOSSL client options
 FIDOSSL_CLIENT_OPTS *opts = malloc(sizeof(FIDOSSL_CLIENT_OPTS));
 if (opts == NULL) {
-    // handle malloc error
+    // Handle malloc error
 }
 
 // Modes are: FIDOSSL_REGISTER or FIDOSSL_AUTHENTICATE
