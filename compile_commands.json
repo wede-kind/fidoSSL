@@ -1,0 +1,355 @@
+[
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborerrorstrings.o",
+   "src/cborerrorstrings.c"
+  ],
+  "file": "src/cborerrorstrings.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborencoder.o",
+   "src/cborencoder.c"
+  ],
+  "file": "src/cborencoder.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborencoder_close_container_checked.o",
+   "src/cborencoder_close_container_checked.c"
+  ],
+  "file": "src/cborencoder_close_container_checked.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborencoder_float.o",
+   "src/cborencoder_float.c"
+  ],
+  "file": "src/cborencoder_float.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborparser.o",
+   "src/cborparser.c"
+  ],
+  "file": "src/cborparser.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborparser_float.o",
+   "src/cborparser_float.c"
+  ],
+  "file": "src/cborparser_float.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborpretty.o",
+   "src/cborpretty.c"
+  ],
+  "file": "src/cborpretty.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborparser_dup_string.o",
+   "src/cborparser_dup_string.c"
+  ],
+  "file": "src/cborparser_dup_string.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborpretty_stdio.o",
+   "src/cborpretty_stdio.c"
+  ],
+  "file": "src/cborpretty_stdio.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cbortojson.o",
+   "src/cbortojson.c"
+  ],
+  "file": "src/cbortojson.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "src/cborvalidation.o",
+   "src/cborvalidation.c"
+  ],
+  "file": "src/cborvalidation.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground/libs/tinycbor",
+  "arguments": [
+   "cc",
+   "-I./src",
+   "-std=gnu99",
+   "-Wall",
+   "-Wextra",
+   "-Werror=incompatible-pointer-types",
+   "-Werror=implicit-function-declaration",
+   "-Werror=int-conversion",
+   "-c",
+   "-o",
+   "tools/cbordump/cbordump.o",
+   "tools/cbordump/cbordump.c"
+  ],
+  "file": "tools/cbordump/cbordump.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/common.c",
+   "-o",
+   "build/obj/common.o"
+  ],
+  "file": "src/common.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/debug.c",
+   "-o",
+   "build/obj/debug.o"
+  ],
+  "file": "src/debug.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/encoding.c",
+   "-o",
+   "build/obj/encoding.o"
+  ],
+  "file": "src/encoding.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/fidossl.c",
+   "-o",
+   "build/obj/fidossl.o"
+  ],
+  "file": "src/fidossl.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/rp.c",
+   "-o",
+   "build/obj/rp.o"
+  ],
+  "file": "src/rp.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/serialize.c",
+   "-o",
+   "build/obj/serialize.o"
+  ],
+  "file": "src/serialize.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I./libs/tinycbor/src",
+   "-I/opt/homebrew/include",
+   "-g",
+   "-Wall",
+   "-c",
+   "src/ud.c",
+   "-o",
+   "build/obj/ud.o"
+  ],
+  "file": "src/ud.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I/opt/homebrew/include",
+   "-I./libs/tinycbor/src",
+   "-I./src",
+   "-g",
+   "-Wall",
+   "-c",
+   "test/client.c",
+   "-o",
+   "build/obj/client.o"
+  ],
+  "file": "test/client.c"
+ },
+ {
+  "directory": "/Users/jonas/thesis/playground",
+  "arguments": [
+   "cc",
+   "-I/opt/homebrew/include",
+   "-I./libs/tinycbor/src",
+   "-I./src",
+   "-g",
+   "-Wall",
+   "-c",
+   "test/server.c",
+   "-o",
+   "build/obj/server.o"
+  ],
+  "file": "test/server.c"
+ }
+]

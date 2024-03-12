@@ -1,0 +1,144 @@
+# PublicKeyCredentialCreationOptions
+{
+  "publicKey": {
+    "attestation": "none",
+    "authenticatorSelection": {
+      "authenticatorAttachment": "cross-platform",
+      "requireResidentKey": true,
+      "residentKey": "required",
+      "userVerification": "discouraged"
+    },
+    "challenge": "b0748844706598a889e6e8137409778b",
+    "pubKeyCredParams": [
+      {
+        "alg": -8,
+        "type": "public-key"
+      },
+      {
+        "alg": -7,
+        "type": "public-key"
+      },
+      {
+        "alg": -257,
+        "type": "public-key"
+      }
+    ],
+    "rp": {
+      "id": "demo.yubico.com",
+      "name": "Yubico Demo"
+    },
+    "timeout": 90000,
+    "user": {
+      "displayName": "alice",
+      "id": "13d14ca99e3fd01050b0a13927b6f70c97eabf823ce8555d3cb9023c9dc35b8a34f5a3cc45842c7e666bdb6453403551246be6b4e928e6d3befa32eb86c9dd3e",
+      "name": "alice"
+    }
+  }
+}
+# Authenticator Response
+{
+  "id": "5uXu4QOQesL0T2DHmXlwwUfbIB1cg-_eFSryu5Uy3a0Ya6rjb4g_9XnBdNSZjiMR",
+  "response": {
+    "attestationObject": "a363666d74646e6f6e656761747453746d74a06861757468446174615891c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b74100000002000000000000000000000000000000000030e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311a4010103272006215820e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3",
+    "clientDataJSON": "7b226368616c6c656e6765223a22734853495248426c6d4b694a3575675464416c336977222c226f726967696e223a2268747470733a2f2f64656d6f2e79756269636f2e636f6d222c2274797065223a22776562617574686e2e637265617465227d",
+    "transports": [],
+    "publicKeyAlgorithm": -8,
+    "publicKey": "302a300506032b6570032100e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3"
+  },
+  "authenticatorAttachment": null,
+  "clientExtensionResults": {}
+}
+# Parsed clientDataJSON response
+{
+  "challenge": "sHSIRHBlmKiJ5ugTdAl3iw",
+  "origin": "https://demo.yubico.com",
+  "type": "webauthn.create"
+}
+# Relying Party extracted information
+{
+  "aaguid": {
+    "guid": "00000000-0000-0000-0000-000000000000",
+    "raw": "00000000000000000000000000000000"
+  },
+  "attestationFmt": "none",
+  "attestationObject": "a363666d74646e6f6e656761747453746d74a06861757468446174615891c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b74100000002000000000000000000000000000000000030e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311a4010103272006215820e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3",
+  "createdAt": "2024-02-13T16:07:01.297053+00:00",
+  "credentialId": "e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311",
+  "device": {
+    "name": "Unknown device",
+    "type": "unknown"
+  },
+  "largeBlob": false,
+  "publicKeyAlgorithm": -8,
+  "registrationData": {
+    "authenticatorData": "c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b74100000002000000000000000000000000000000000030e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311a4010103272006215820e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3",
+    "clientExtensionResults": {},
+    "flags": {
+      "AT": true,
+      "ED": false,
+      "UP": true,
+      "UV": false
+    },
+    "signatureCounter": 2
+  },
+  "residentKey": null
+}
+# Session code: "7754qQT2zgEN"
+
+# PublicKeyCredentialRequestOptions
+{
+  "publicKey": {
+    "allowCredentials": [
+      {
+        "id": "e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311",
+        "type": "public-key"
+      }
+    ],
+    "challenge": "6e47059fcd3cf922cc6e91ac754e9871",
+    "rpId": "demo.yubico.com",
+    "timeout": 90000,
+    "userVerification": "discouraged"
+  }
+}
+# Authenticator Response
+{
+  "id": "5uXu4QOQesL0T2DHmXlwwUfbIB1cg-_eFSryu5Uy3a0Ya6rjb4g_9XnBdNSZjiMR",
+  "response": {
+    "authenticatorData": "c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b70100000003",
+    "clientDataJSON": "7b226368616c6c656e6765223a22626b63466e3830382d534c4d62704773645536596351222c226f726967696e223a2268747470733a2f2f64656d6f2e79756269636f2e636f6d222c2274797065223a22776562617574686e2e676574227d",
+    "signature": "613b3e2b2eb9de66eab4d9d5d0b49b9e699a04226cf3617c36cc972e3835fba974e6726fe827c8b34a0014d1bdc77a1d9c272b815ed9fcc2c5ac4a88b260220b",
+    "userHandle": "13d14ca99e3fd01050b0a13927b6f70c97eabf823ce8555d3cb9023c9dc35b8a34f5a3cc45842c7e666bdb6453403551246be6b4e928e6d3befa32eb86c9dd3e"
+  },
+  "authenticatorAttachment": null,
+  "clientExtensionResults": {}
+}
+# Parsed clientDataJSON response
+{
+  "challenge": "bkcFn808-SLMbpGsdU6YcQ",
+  "origin": "https://demo.yubico.com",
+  "type": "webauthn.get"
+}
+# Relying Party extracted information
+{
+  "authData": {
+    "flags": {
+      "AT": false,
+      "ED": false,
+      "UP": true,
+      "UV": false,
+      "value": 1
+    },
+    "rpIdHash": "c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b7",
+    "signatureCounter": 3
+  },
+  "credentialData": {
+    "aaguid": "00000000000000000000000000000000",
+    "credentialId": "e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311",
+    "publicKey": {
+      "1": 1,
+      "3": -8,
+      "-1": 6,
+      "-2": "e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3"
+    }
+  }
+}

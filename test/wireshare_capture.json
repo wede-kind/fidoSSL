@@ -1,0 +1,312 @@
+webauthn/register-begin: client --> RP
+{}
+
+webauthn/register-begin: client <-- RP
+{
+   "data":{
+      "displayName":"Yubico demo user",
+      "publicKey":{
+         "attestation":"direct",
+         "authenticatorSelection":{
+            "requireResidentKey":false,
+            "residentKey":"discouraged",
+            "userVerification":"discouraged"
+         },
+         "challenge":{
+            "$base64":"lLATnBbCJrZADDzQ/jfJAuE+1/5eot+7dD94QDTPyJI="
+         },
+         "excludeCredentials":[
+            
+         ],
+         "pubKeyCredParams":[
+            {
+               "alg":-7,
+               "type":"public-key"
+            },
+            {
+               "alg":-257,
+               "type":"public-key"
+            }
+         ],
+         "rp":{
+            "id":"demo.yubico.com",
+            "name":"Yubico Demo"
+         },
+         "timeout":600000,
+         "user":{
+            "displayName":"Yubico demo user",
+            "id":{
+               "$base64":"rWhD5LVPRCjG3MSdu9wuJEpS7ae0dTQTMraZvB5Kp+Y="
+            },
+            "name":"Yubico demo user"
+         }
+      },
+      "requestId":"11ae33e4-0367-4ef8-962a-1abfb59d626a",
+      "username":"Yubico demo user"
+   },
+   "status":"success"
+}
+
+webauthn/register-finish: client --> RP
+{
+   "requestId":"11ae33e4-0367-4ef8-962a-1abfb59d626a",
+   "username":"Yubico demo user",
+   "displayName":"Yubico demo user",
+   "attestation":{
+      "attestationObject":{
+         "$base64":"o2NmbXRoZmlkby11MmZnYXR0U3RtdKJjc2lnWEcwRQIhAO+tBMcQ5325ME4O7ZKl5W0tWlUYzQ/BZn3Wlg7SO41EAiAgBOY3zfu28pffOFejLUGFnJMhk8U1dwmJXKeyFOfwwmN4NWOBWQLdMIIC2TCCAcGgAwIBAgIJAN+S2cTi7WYKMA0GCSqGSIb3DQEBCwUAMC4xLDAqBgNVBAMTI1l1YmljbyBVMkYgUm9vdCBDQSBTZXJpYWwgNDU3MjAwNjMxMCAXDTE0MDgwMTAwMDAwMFoYDzIwNTAwOTA0MDAwMDAwWjBvMQswCQYDVQQGEwJTRTESMBAGA1UECgwJWXViaWNvIEFCMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMSgwJgYDVQQDDB9ZdWJpY28gVTJGIEVFIFNlcmlhbCAxMTU1MTA5NTk5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEChhsbk0KalKKRJCaeiQjaHAo1MV+zLcXuhKAuFwvweTgYWaMPCCu8zNQ0ZZFI4osOQv13/o0/yVQL0cPPUC4iKOBgTB/MBMGCisGAQQBgsQKDQEEBQQDBQQDMCIGCSsGAQQBgsQKAgQVMS4zLjYuMS40LjEuNDE0ODIuMS43MBMGCysGAQQBguUcAgEBBAQDAgQwMCEGCysGAQQBguUcAQEEBBIEEC/AV5+BE0fqsRa7Wo25ICowDAYDVR0TAQH/BAIwADANBgkqhkiG9w0BAQsFAAOCAQEAgqyvETCpm9FDJ9L4+bBBoqBKZoUnJCLlexSwuPg7bxVFZku/VWgerwFYciq/ztLkrGM87AlZVkUksPLlF92XEJi5iRUX7NDFU6Lkc5+d4T2v0NXXuKxKN/TyzDDvJcsAZS0Z22nX2le9Gpwdjth9RtgNKzvf0dnvnStoMtStW810IUzmphQdFrLpOsssiPYKPrbV9hRxl1kJNzvGd5AjJFcaVz9g8Hu+0XuSyLWfooIQv6jGASKTABs57+V7+cseOsqKQTD4Ovhmj3Pe8nEbINyZ6KgE7qP3QnGXtrRRs3NcI7ybG+J0wm07+RlvjEpLcV9LlcTbe5fnWU60ZWSMHGhhdXRoRGF0YVjExGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7dBAAAAAAAAAAAAAAAAAAAAAAAAAAAAQB6kfBpgULNmr+lOcO2nWM28h4T5dWO2/NTO5F5HIwTVI9KmsI1WqtXZm6LyT8jMyl9zFIAqNRV07/OBX0/YtTWlAQIDJiABIVggUixwLuGTDBMt788MYwrUxK+ZsjaFZcBFHI5MNWh/+G8iWCBbaqMWGvmtnNqMAt5mH8849bt7Zy/ErGHksTc/YVEBmQ=="
+      },
+      "clientDataJSON":{
+         "$base64":"eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoibExBVG5CYkNKclpBRER6UV9qZkpBdUUtMV81ZW90LTdkRDk0UURUUHlKSSIsIm9yaWdpbiI6Imh0dHBzOi8vZGVtby55dWJpY28uY29tIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ=="
+      }
+   }
+}
+
+webauthn/register-finish: client <-- RP
+{
+   "data":{
+      "attestationObject":{
+         "attStmt":{
+            "sig":{
+               "$base64":"MEUCIQDvrQTHEOd9uTBODu2SpeVtLVpVGM0PwWZ91pYO0juNRAIgIATmN837tvKX3zhXoy1BhZyTIZPFNXcJiVynshTn8MI="
+            },
+            "x5c":[
+               {
+                  "$base64":"MIIC2TCCAcGgAwIBAgIJAN+S2cTi7WYKMA0GCSqGSIb3DQEBCwUAMC4xLDAqBgNVBAMTI1l1YmljbyBVMkYgUm9vdCBDQSBTZXJpYWwgNDU3MjAwNjMxMCAXDTE0MDgwMTAwMDAwMFoYDzIwNTAwOTA0MDAwMDAwWjBvMQswCQYDVQQGEwJTRTESMBAGA1UECgwJWXViaWNvIEFCMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9uMSgwJgYDVQQDDB9ZdWJpY28gVTJGIEVFIFNlcmlhbCAxMTU1MTA5NTk5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEChhsbk0KalKKRJCaeiQjaHAo1MV+zLcXuhKAuFwvweTgYWaMPCCu8zNQ0ZZFI4osOQv13/o0/yVQL0cPPUC4iKOBgTB/MBMGCisGAQQBgsQKDQEEBQQDBQQDMCIGCSsGAQQBgsQKAgQVMS4zLjYuMS40LjEuNDE0ODIuMS43MBMGCysGAQQBguUcAgEBBAQDAgQwMCEGCysGAQQBguUcAQEEBBIEEC/AV5+BE0fqsRa7Wo25ICowDAYDVR0TAQH/BAIwADANBgkqhkiG9w0BAQsFAAOCAQEAgqyvETCpm9FDJ9L4+bBBoqBKZoUnJCLlexSwuPg7bxVFZku/VWgerwFYciq/ztLkrGM87AlZVkUksPLlF92XEJi5iRUX7NDFU6Lkc5+d4T2v0NXXuKxKN/TyzDDvJcsAZS0Z22nX2le9Gpwdjth9RtgNKzvf0dnvnStoMtStW810IUzmphQdFrLpOsssiPYKPrbV9hRxl1kJNzvGd5AjJFcaVz9g8Hu+0XuSyLWfooIQv6jGASKTABs57+V7+cseOsqKQTD4Ovhmj3Pe8nEbINyZ6KgE7qP3QnGXtrRRs3NcI7ybG+J0wm07+RlvjEpLcV9LlcTbe5fnWU60ZWSMHA=="
+               }
+            ]
+         },
+         "authData":{
+            "credentialData":{
+               "aaguid":{
+                  "$base64":"AAAAAAAAAAAAAAAAAAAAAA=="
+               },
+               "credentialId":{
+                  "$base64":"HqR8GmBQs2av6U5w7adYzbyHhPl1Y7b81M7kXkcjBNUj0qawjVaq1dmbovJPyMzKX3MUgCo1FXTv84FfT9i1NQ=="
+               },
+               "publicKey":{
+                  "-1":1,
+                  "-2":{
+                     "$base64":"UixwLuGTDBMt788MYwrUxK+ZsjaFZcBFHI5MNWh/+G8="
+                  },
+                  "-3":{
+                     "$base64":"W2qjFhr5rZzajALeZh/POPW7e2cvxKxh5LE3P2FRAZk="
+                  },
+                  "1":2,
+                  "3":-7
+               }
+            },
+            "flags":{
+               "AT":true,
+               "ED":false,
+               "UP":true,
+               "UV":false,
+               "value":65
+            },
+            "rpIdHash":{
+               "$base64":"xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7c="
+            },
+            "signatureCounter":0
+         },
+         "fmt":"fido-u2f"
+      },
+      "clientData":{
+         "$base64":"eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoibExBVG5CYkNKclpBRER6UV9qZkpBdUUtMV81ZW90LTdkRDk0UURUUHlKSSIsIm9yaWdpbiI6Imh0dHBzOi8vZGVtby55dWJpY28uY29tIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ=="
+      },
+      "device":{
+         "mds":{
+            "certifications":[
+               "FIDO_CERTIFIED_L1"
+            ]
+         },
+         "mdsUnavailable":false,
+         "names":[
+            "YubiKey 5 NFC",
+            "YubiKey 5C NFC"
+         ],
+         "type":"yk5nfc-cnfc"
+      },
+      "parsed_x5c":{
+         "extensions":{
+            "1.3.6.1.4.1.41482.13.1":{
+               "data":{
+                  "hex":"0403050403",
+                  "version":"5.4.3"
+               },
+               "type":"Firmware version"
+            },
+            "1.3.6.1.4.1.41482.2":{
+               "data":{
+                  "decoded":"1.3.6.1.4.1.41482.1.7",
+                  "description":"YubiKey 5",
+                  "hex":"312e332e362e312e342e312e34313438322e312e37"
+               },
+               "type":"U2F Device identifier"
+            },
+            "1.3.6.1.4.1.45724.1.1.4":{
+               "data":{
+                  "aaguid":"2fc0579f811347eab116bb5a8db9202a",
+                  "hex":"04102fc0579f811347eab116bb5a8db9202a"
+               },
+               "type":"id-fido-gen-ce-aaguid"
+            },
+            "1.3.6.1.4.1.45724.2.1.1":{
+               "data":{
+                  "hex":"03020430",
+                  "transports":[
+                     "USB",
+                     "NFC"
+                  ]
+               },
+               "type":"fidoU2FTransports"
+            },
+            "2.5.29.19":{
+               "data":{
+                  "CA":false
+               },
+               "type":"Basic constraints"
+            }
+         },
+         "fingerprint":{
+            "md5":{
+               "$base64":"r6iW7QfCy68PjK9h8SgkSw=="
+            },
+            "sha1":{
+               "$base64":"qJbYS2pBAcojp0XXBxUQVMbjB7A="
+            },
+            "sha256":{
+               "$base64":"X2DtYITWDzsrKJ6NaHSek1ZLfbVTXH48QwVEX97n2DY="
+            }
+         },
+         "issuer":{
+            "rfc4514":"CN=Yubico U2F Root CA Serial 457200631"
+         },
+         "not_valid_after":"2050-09-04T00:00:00",
+         "not_valid_before":"2014-08-01T00:00:00",
+         "public_key":{
+            "data":{
+               "curve_name":"secp256r1",
+               "key_size":256,
+               "pub":"040a186c6e4d0a6a528a44909a7a2423687028d4c57eccb717ba1280b85c2fc1e4e061668c3c20aef33350d19645238a2c390bf5dffa34ff25502f470f3d40b888"
+            },
+            "type":"ECC"
+         },
+         "serial_number":16110178256701711882,
+         "signature":"82acaf1130a99bd14327d2f8f9b041a2a04a6685272422e57b14b0b8f83b6f1545664bbf55681eaf0158722abfced2e4ac633cec0959564524b0f2e517dd971098b9891517ecd0c553a2e4739f9de13dafd0d5d7b8ac4a37f4f2cc30ef25cb00652d19db69d7da57bd1a9c1d8ed87d46d80d2b3bdfd1d9ef9d2b6832d4ad5bcd74214ce6a6141d16b2e93acb2c88f60a3eb6d5f61471975909373bc677902324571a573f60f07bbed17b92c8b59fa28210bfa8c6012293001b39efe57bf9cb1e3aca8a4130f83af8668f73def2711b20dc99e8a804eea3f7427197b6b451b3735c23bc9b1be274c26d3bf9196f8c4a4b715f4b95c4db7b97e7594eb465648c1c",
+         "signature_algorithm":{
+            "description":"sha256WithRSAEncryption",
+            "oid":"1.2.840.113549.1.1.11"
+         },
+         "subject":{
+            "rfc4514":"CN=Yubico U2F EE Serial 1155109599,OU=Authenticator Attestation,O=Yubico AB,C=SE"
+         },
+         "subject_key_identifier":{
+            "$base64":"uVIGIo6tSSueFFBKvvyyBUaw5Ts="
+         },
+         "version":{
+            "hex":2,
+            "v":3
+         }
+      },
+      "pem":"-----BEGIN CERTIFICATE-----\nMIIC2TCCAcGgAwIBAgIJAN+S2cTi7WYKMA0GCSqGSIb3DQEBCwUAMC4xLDAqBgNV\nBAMTI1l1YmljbyBVMkYgUm9vdCBDQSBTZXJpYWwgNDU3MjAwNjMxMCAXDTE0MDgw\nMTAwMDAwMFoYDzIwNTAwOTA0MDAwMDAwWjBvMQswCQYDVQQGEwJTRTESMBAGA1UE\nCgwJWXViaWNvIEFCMSIwIAYDVQQLDBlBdXRoZW50aWNhdG9yIEF0dGVzdGF0aW9u\nMSgwJgYDVQQDDB9ZdWJpY28gVTJGIEVFIFNlcmlhbCAxMTU1MTA5NTk5MFkwEwYH\nKoZIzj0CAQYIKoZIzj0DAQcDQgAEChhsbk0KalKKRJCaeiQjaHAo1MV+zLcXuhKA\nuFwvweTgYWaMPCCu8zNQ0ZZFI4osOQv13/o0/yVQL0cPPUC4iKOBgTB/MBMGCisG\nAQQBgsQKDQEEBQQDBQQDMCIGCSsGAQQBgsQKAgQVMS4zLjYuMS40LjEuNDE0ODIu\nMS43MBMGCysGAQQBguUcAgEBBAQDAgQwMCEGCysGAQQBguUcAQEEBBIEEC/AV5+B\nE0fqsRa7Wo25ICowDAYDVR0TAQH/BAIwADANBgkqhkiG9w0BAQsFAAOCAQEAgqyv\nETCpm9FDJ9L4+bBBoqBKZoUnJCLlexSwuPg7bxVFZku/VWgerwFYciq/ztLkrGM8\n7AlZVkUksPLlF92XEJi5iRUX7NDFU6Lkc5+d4T2v0NXXuKxKN/TyzDDvJcsAZS0Z\n22nX2le9Gpwdjth9RtgNKzvf0dnvnStoMtStW810IUzmphQdFrLpOsssiPYKPrbV\n9hRxl1kJNzvGd5AjJFcaVz9g8Hu+0XuSyLWfooIQv6jGASKTABs57+V7+cseOsqK\nQTD4Ovhmj3Pe8nEbINyZ6KgE7qP3QnGXtrRRs3NcI7ybG+J0wm07+RlvjEpLcV9L\nlcTbe5fnWU60ZWSMHA==\n-----END CERTIFICATE-----"
+   },
+   "status":"success"
+}
+
+_________________________________________________________________
+
+
+webauthn/authenticate-begin: client --> RP
+{}
+
+webauthn/authenticate-begin: client <-- RP
+{
+   "data":{
+      "publicKey":{
+         "allowCredentials":[
+            {
+               "id":{
+                  "$base64":"HqR8GmBQs2av6U5w7adYzbyHhPl1Y7b81M7kXkcjBNUj0qawjVaq1dmbovJPyMzKX3MUgCo1FXTv84FfT9i1NQ=="
+               },
+               "type":"public-key"
+            }
+         ],
+         "challenge":{
+            "$base64":"1Aj3EzLEcDTJ1EzZAusbjMR8hN8yQesrXwWVPvw97n4="
+         },
+         "rpId":"demo.yubico.com",
+         "timeout":600000,
+         "userVerification":"discouraged"
+      },
+      "requestId":"ce6bde7a-bea9-4742-85f7-247f86b20cd7",
+      "username":"Yubico demo user"
+   },
+   "status":"success"
+}
+
+webauthn/authenticate-finish: client --> RP
+{
+   "requestId":"ce6bde7a-bea9-4742-85f7-247f86b20cd7",
+   "assertion":{
+      "credentialId":{
+         "$base64":"HqR8GmBQs2av6U5w7adYzbyHhPl1Y7b81M7kXkcjBNUj0qawjVaq1dmbovJPyMzKX3MUgCo1FXTv84FfT9i1NQ=="
+      },
+      "authenticatorData":{
+         "$base64":"xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7cBAAAAAQ=="
+      },
+      "clientDataJSON":{
+         "$base64":"eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiMUFqM0V6TEVjRFRKMUV6WkF1c2JqTVI4aE44eVFlc3JYd1dWUHZ3OTduNCIsIm9yaWdpbiI6Imh0dHBzOi8vZGVtby55dWJpY28uY29tIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ=="
+      },
+      "signature":{
+         "$base64":"MEUCIQDDaLttTkk3DHEAhFETyt8UoCFbfXBF2PoTMtV/1yKUOQIgXlDqS4S5ZCmTC0GrFQPZRmFeAzPmqT+gcRuUqfQoINM="
+      }
+   }
+}
+
+webauthn/authenticate-finish: client <-- RP
+{
+   "data":{
+      "authenticatorData":{
+         "authData":{
+            "credentialData":{
+               "aaguid":{
+                  "$base64":"AAAAAAAAAAAAAAAAAAAAAA=="
+               },
+               "credentialId":{
+                  "$base64":"HqR8GmBQs2av6U5w7adYzbyHhPl1Y7b81M7kXkcjBNUj0qawjVaq1dmbovJPyMzKX3MUgCo1FXTv84FfT9i1NQ=="
+               },
+               "publicKey":{
+                  "-1":1,
+                  "-2":{
+                     "$base64":"UixwLuGTDBMt788MYwrUxK+ZsjaFZcBFHI5MNWh/+G8="
+                  },
+                  "-3":{
+                     "$base64":"W2qjFhr5rZzajALeZh/POPW7e2cvxKxh5LE3P2FRAZk="
+                  },
+                  "1":2,
+                  "3":-7
+               }
+            },
+            "flags":{
+               "AT":false,
+               "ED":false,
+               "UP":true,
+               "UV":false,
+               "value":1
+            },
+            "rpIdHash":{
+               "$base64":"xGzvgq0bVGR3WR0Aiwh1nsPm0uy085R0v+ppaZJdA7c="
+            },
+            "signatureCounter":1
+         },
+         "clientData":{
+            "challenge":"1Aj3EzLEcDTJ1EzZAusbjMR8hN8yQesrXwWVPvw97n4",
+            "crossOrigin":false,
+            "origin":"https://demo.yubico.com",
+            "type":"webauthn.get"
+         }
+      },
+      "username":"Yubico demo user"
+   },
+   "status":"success"
+}

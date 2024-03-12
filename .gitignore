@@ -53,3 +53,5 @@ dkms.conf
 
 # macOS Desktop Services Store
 .DS_Store
+
+build
