@@ -56,7 +56,7 @@ enum fido_state {
     STATE_REG_RESPONSE_RECEIVED,
     STATE_REG_SUCCESS,
     STATE_REG_FAILURE
-} state;
+};
 
 // TODO: delete
 struct fido_data {
