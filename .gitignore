@@ -56,3 +56,4 @@ dkms.conf
 
 build
 fido2.db
+.cache
