@@ -86,6 +86,9 @@ int fidossl_client_add_cb(
             }
             data->state = STATE_AUTH_RESPONSE_SENT;
             break;
+        case STATE_REG_RESPONSE_SENT:
+            // TODO: investigate why this context is called twice
+            return 0;
         case STATE_PRE_REG_RESPONSE_SENT:
             // TODO: investigate why this context is called twice
             return 0;
