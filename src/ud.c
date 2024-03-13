@@ -55,7 +55,7 @@ struct fido_data *init_ud(SSL *ssl, void *add_arg) {
     if (opts->mode == FIDOSSL_REGISTER) {
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    Mode: Key enrollment");
         data->state = STATE_REG_INITIAL;
-        if (base64_decode(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
+        if (decode_base64(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
             0) {
             debug_printf(DEBUG_LEVEL_ERROR,
                          "Failed to base64 decode the ticket");

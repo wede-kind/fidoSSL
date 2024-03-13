@@ -1,6 +1,6 @@
 #include "encoding.h"
 
-int base64_encode(const u8 *input, size_t input_len, char** output) {
+int encode_base64(const u8 *input, size_t input_len, char** output) {
     if (input == NULL || output == NULL) return -1;
 
     // Calculate the output length: 4 characters for every 3 bytes
@@ -22,7 +22,7 @@ int base64_encode(const u8 *input, size_t input_len, char** output) {
     return 0;
 }
 
-int base64_decode(const char *input, u8 **output, size_t *output_len) {
+int decode_base64(const char *input, u8 **output, size_t *output_len) {
     if (input == NULL || output == NULL) return -1;
 
     size_t len = strlen(input);
@@ -48,7 +48,7 @@ int base64_decode(const char *input, u8 **output, size_t *output_len) {
 }
 
 int base64url_encode(const u8 *input, size_t input_len, char** output) {
-    if (base64_encode(input, input_len, output) != 0) {
+    if (encode_base64(input, input_len, output) != 0) {
         return -1;
     }
     // Replace base64 characters which are not URL safe
@@ -79,7 +79,7 @@ int base64url_decode(const char *input, u8 **output, size_t *output_len) {
     }
 
     // Use the base64_decode function on the modified input
-    int decodeResult = base64_decode(modifiedInput, output, output_len);
+    int decodeResult = decode_base64(modifiedInput, output, output_len);
 
     // Free the temporary buffer
     free(modifiedInput);

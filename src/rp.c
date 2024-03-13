@@ -57,7 +57,7 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    RP Name: %s", data->rp_name);
 
     // The ticket is base64 encoded, so we decode it
-    if (base64_decode(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
+    if (decode_base64(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
         0) {
         debug_printf(
             DEBUG_LEVEL_ERROR,

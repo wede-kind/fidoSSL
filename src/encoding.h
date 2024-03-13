@@ -11,7 +11,7 @@
  *               freed by the caller.
  * @return int Returns 0 on success, non-zero error code otherwise.
  */
-int base64_encode(const u8 *input, size_t input_len, char** output);
+int encode_base64(const u8 *input, size_t input_len, char** output);
 
 /**
  * Decodes a Base64 encoded string back into binary data.
@@ -24,7 +24,7 @@ int base64_encode(const u8 *input, size_t input_len, char** output);
  *                   data will be stored.
  * @return int Returns 0 on success, non-zero error code otherwise.
  */
-int base64_decode(const char *input, u8 **output, size_t *output_len);
+int decode_base64(const char *input, u8 **output, size_t *output_len);
 
 /**
  * Encodes a binary input into a Base64url encoded string.
