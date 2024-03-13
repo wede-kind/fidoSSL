@@ -1,7 +1,7 @@
 CC = cc
 # Specify compile flags, library paths and libraries to link against for the
 # fido extension (which will be a static library on its own).
-PROJECT_CFLAGS = -I./libs/tinycbor/src -I/opt/homebrew/include -g -Wall
+PROJECT_CFLAGS = -I./libs/tinycbor/src -I/usr/include -I/opt/homebrew/include -g -Wall
 
 PROJECT_SRC = $(wildcard src/*.c)
 PROJECT_OBJ = $(patsubst src/%.c, build/obj/%.o, $(PROJECT_SRC))
@@ -9,9 +9,9 @@ PROJECT_TARGET = build/libfidossl.a
 
 # Specify compile flags, library paths and libraries to link against for the
 # test prorgams (client and server).
-TEST_CFLAGS = -I/opt/homebrew/include -I./libs/tinycbor/src -I./src -g -Wall
-TEST_LDFLAGS = -L/opt/homebrew/lib -L./libs/tinycbor/lib -L./build
-TEST_LDLIBS = -lcrypto -lssl -lfido2 -ltinycbor -lfidossl -ljansson -lsqlite3
+TEST_CFLAGS = -I/usr/include -I/opt/homebrew/include -I./libs/tinycbor/src -I./src -g -Wall
+TEST_LDFLAGS =  -L./build -L/usr/lib/aarch64-linux-gnu -L./libs/tinycbor/lib -L/opt/homebrew/lib
+TEST_LDLIBS = -lfidossl -lcrypto -lssl -lfido2 -ltinycbor -ljansson -lsqlite3
 
 TEST_CLIENT_SRC = test/client.c
 TEST_SERVER_SRC = test/server.c
