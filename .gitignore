@@ -55,3 +55,4 @@ dkms.conf
 .DS_Store
 
 build
+fido2.db
