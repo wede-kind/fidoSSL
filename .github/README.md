@@ -50,7 +50,7 @@ On Ubuntu, dependencies can be installed with [aptitude](https://wiki.ubuntuuser
 sudo apt update
 
 # Install dependencies
-sudo apt install build-essential libssl-dev libfido2-dev libtinycbor-dev libsqlite3-dev  libjansson-dev
+sudo apt install build-essential libssl-dev libfido2-dev libsqlite3-dev  libjansson-dev
 ```
 
 #### Building the Shared Library
