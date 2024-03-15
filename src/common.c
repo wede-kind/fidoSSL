@@ -22,8 +22,6 @@ const char* get_ssl_ext_context_code(unsigned int context) {
         case SSL_EXT_TLS1_3_CERTIFICATE: return "SSL_EXT_TLS1_3_CERTIFICATE";
         case SSL_EXT_TLS1_3_NEW_SESSION_TICKET: return "SSL_EXT_TLS1_3_NEW_SESSION_TICKET";
         case SSL_EXT_TLS1_3_CERTIFICATE_REQUEST: return "SSL_EXT_TLS1_3_CERTIFICATE_REQUEST";
-        case SSL_EXT_TLS1_3_CERTIFICATE_COMPRESSION: return "SSL_EXT_TLS1_3_CERTIFICATE_COMPRESSION";
-        case SSL_EXT_TLS1_3_RAW_PUBLIC_KEY: return "SSL_EXT_TLS1_3_RAW_PUBLIC_KEY";
         default: return "Unknown Context";
     }
 }
