@@ -33,9 +33,8 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
     debug_initialize();
     set_debug_level(opts->debug_level);
 
-    if (!opts->rp_id || !opts->rp_name || !opts->ticket_b64) {
-        debug_printf(DEBUG_LEVEL_ERROR, "FIDOSSL: A rp id, rp name and ticket "
-                                        "must be set for registration");
+    if (!opts->rp_id || !opts->rp_name) {
+        debug_printf(DEBUG_LEVEL_ERROR, "FIDOSSL: A rp id, rp name must be set");
         return NULL;
     }
     // Create the relying party data. TODO: free all values of fido_data
