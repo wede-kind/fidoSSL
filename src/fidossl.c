@@ -57,7 +57,6 @@ int fidossl_client_add_cb(
             break;
         default:
             debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
-            // TODO: find a better error code and apply for all invalid states
             *al = SSL_AD_INTERNAL_ERROR;
             return -1;
         }
@@ -86,17 +85,16 @@ int fidossl_client_add_cb(
             }
             data->state = STATE_AUTH_RESPONSE_SENT;
             break;
+        // Since the SSL_EXT_TLS1_3_CERTIFICATE context is twice, once for the
+        // server certificate and then for the certificate request, the
+        // following 3 states are ignored
         case STATE_REG_RESPONSE_SENT:
-            // TODO: investigate why this context is called twice
-            return 0;
         case STATE_PRE_REG_RESPONSE_SENT:
-            // TODO: investigate why this context is called twice
-            return 0;
         case STATE_AUTH_RESPONSE_SENT:
-            // TODO: investigate why this context is called twice
             return 0;
         default:
             debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+            *al = SSL_AD_INTERNAL_ERROR;
             return -1;
         }
     } else {
@@ -148,6 +146,7 @@ int fidossl_client_parse_cb(
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
         return 1;
@@ -209,6 +208,7 @@ int fidossl_server_add_cb(
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
     } else {
@@ -249,8 +249,8 @@ int fidossl_server_parse_cb(
                     return -1;
                 }
                 data->state = STATE_PRE_REG_RESPONSE_RECEIVED;
-                // TODO: Should we error out here to denote that a second
-                // handshake is required?
+                // Now, a second handshake is necessary to complete the
+                // registration.
                 break;
             case STATE_REG_REQUEST_SENT:
                 if (process_reg_response(in, inlen, data) != 0) {
@@ -270,6 +270,7 @@ int fidossl_server_parse_cb(
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
     } else {

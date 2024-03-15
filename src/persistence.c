@@ -1,6 +1,8 @@
 #include "persistence.h"
 #include "debug.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Function to execute an SQL statement for table creation
 int execute_sql(sqlite3 *db, const char *sql) {
@@ -177,7 +179,7 @@ int update_sign_count(sqlite3 *db, const u8 *cred_id, size_t cred_id_len,
 int get_exluded_credentials(sqlite3 *db, const u8 *user_id, size_t user_id_len,
                             struct credential **creds, size_t *creds_len) {
     const char *sql = "SELECT cred_id, type, transports "
-                      "FROM credentials WHERE user_id != ?";
+                      "FROM credentials WHERE user_id == ?";
     sqlite3_stmt *stmt;
     int rc;
 
@@ -202,9 +204,8 @@ int get_exluded_credentials(sqlite3 *db, const u8 *user_id, size_t user_id_len,
 
         cred->type = strdup((const char *)sqlite3_column_text(stmt, 1));
         (*creds_len)++;
-        printf("__________\n");
     }
-    printf("Excluded credentials: %zu\n", *creds_len);
+    printf("Number of excluded credentials: %zu\n", *creds_len);
 
     sqlite3_finalize(stmt);
     return 0; // Success

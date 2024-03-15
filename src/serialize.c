@@ -914,6 +914,9 @@ int parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *out) {
                     goto err;
                 }
                 cbor_value_get_array_length(&map_it, &p->exclude_creds_len);
+                // Divide by 2, because the array contains type and id for each
+                // credential
+                p->exclude_creds_len /= 2;
                 p->exclude_creds = OPENSSL_zalloc(p->exclude_creds_len *
                                                   sizeof(struct credential));
                 cbor_value_enter_container(&map_it, &sub_it);
@@ -1352,16 +1355,20 @@ int build(const void *input, enum packet_type type, const u8 **out_buf,
             // array (if present) must contain all of the following fields:
             // type, id and transports
             if (in->exclude_creds_len != 0) {
-                puts("canary");
                 cbor_encode_int(&map, EXCLUDE_CREDS);
                 cbor_encoder_create_array(&map, &sub_array,
-                                          in->exclude_creds_len);
+                                          in->exclude_creds_len * 2);
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    exclude creds:");
                 for (size_t i = 0; i < in->exclude_creds_len; i++) {
                     cbor_encode_text_stringz(&sub_array,
                                              in->exclude_creds[i].type);
                     cbor_encode_byte_string(&sub_array, in->exclude_creds[i].id,
                                             in->exclude_creds[i].id_len);
-                    // TODO: transports as bitmap
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "        type: %s",
+                                 in->exclude_creds[i].type);
+                    debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "        id: ",
+                                    in->exclude_creds[i].id,
+                                    in->exclude_creds[i].id_len);
                 }
                 err = cbor_encoder_close_container(&map, &sub_array);
                 if (err) {

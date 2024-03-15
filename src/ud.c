@@ -343,6 +343,19 @@ fido_cred_t *create_fido_cred_t(struct fido_data *data) {
     // Platform authenticator are not supported for now
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                  "    Authenticator attachment: CROSS_PLATFORM");
+
+    // Set excluded credentials
+    for (size_t i = 0; i < data->exclude_creds_len; i++) {
+        struct credential *excl_cred = &data->exclude_creds[i];
+        if (fido_cred_exclude(cred, excl_cred->id, excl_cred->id_len) != FIDO_OK) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Failed to exclude credential ID");
+            fido_cred_free(&cred);
+            return NULL;
+        }
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Credential ID excluded: ");
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    Excluded Credential ID: ", excl_cred->id, excl_cred->id_len);
+    }
+
     return cred;
 }
 
@@ -540,6 +553,10 @@ int run_ctap(struct fido_data *data, enum fido_mode mode) {
             debug_printf(DEBUG_LEVEL_ERROR,
                          "A PIN is required to use this token. Please set a "
                          "PIN and try again.");
+        } else if (ret == FIDO_ERR_CREDENTIAL_EXCLUDED) {
+            debug_printf(DEBUG_LEVEL_ERROR, "There is already a credential "
+                         "for this user on this token. Excluded credentials "
+                         "prevent the creation of duplicate credentials.");
         } else {
             debug_printf(DEBUG_LEVEL_ERROR, "CTAP failed with error code: %d",
                          ret);

@@ -79,6 +79,18 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    // The program remains in a TIME_WAIT state for a period after the
+    // application has been closed. This is a normal part of the TCP protocol,
+    // designed to ensure that all packets have been received and to handle
+    // delayed packets in the network that may still be routed to your socket.
+    // To allow this program to immediately reuse the port, we set the
+    // SO_REUSEADDR socket option
+    int optval = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+        perror("setsockopt SO_REUSEADDR failed");
+        exit(EXIT_FAILURE);
+    }
+
     // Initialize server address
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -114,7 +126,7 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    printf("=== First TLS connection established.\n");
+    printf("=== TLS connection established.\n");
 
     // Shutdown SSL connection
     while (SSL_shutdown(ssl) != 1) {}
@@ -145,182 +157,3 @@ int main() {
 
     return 0;
 }
-
-
-
-
-// #include <arpa/inet.h>
-// #include <openssl/err.h>
-// #include <openssl/ssl.h>
-// #include <signal.h>
-// #include <stdio.h>
-// #include <string.h>
-// #include <sys/socket.h>
-// #include <unistd.h>
-//
-// #include <fidossl.h>
-//
-// int create_socket(int port) {
-//     int s;
-//     struct sockaddr_in addr;
-//
-//     addr.sin_family = AF_INET;
-//     addr.sin_port = htons(port);
-//     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-//
-//     s = socket(AF_INET, SOCK_STREAM, 0);
-//     if (s < 0) {
-//         perror("Unable to create socket");
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-//         perror("Unable to bind");
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     if (listen(s, 1) < 0) {
-//         perror("Unable to listen");
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     return s;
-// }
-//
-// SSL_CTX *create_context() {
-//     const SSL_METHOD *method;
-//     SSL_CTX *ctx;
-//
-//     method = TLS_server_method();
-//
-//     ctx = SSL_CTX_new(method);
-//     if (!ctx) {
-//         perror("Unable to create SSL context");
-//         ERR_print_errors_fp(stderr);
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     return ctx;
-// }
-//
-// void configure_context(SSL_CTX *ctx) {
-//     /* Set the key and cert */
-//     if (SSL_CTX_use_certificate_file(ctx, "test/keys/localhost.crt", SSL_FILETYPE_PEM) <= 0) {
-//         ERR_print_errors_fp(stderr);
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     if (SSL_CTX_use_PrivateKey_file(ctx, "test/keys/localhost.key", SSL_FILETYPE_PEM) <= 0) {
-//         ERR_print_errors_fp(stderr);
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     FIDOSSL_SERVER_OPTS *opts = malloc(sizeof(FIDOSSL_SERVER_OPTS));
-//     opts->rp_id = "localhost";
-//     opts->rp_name = "Eduroam RP";
-//     opts->challenge_len = 32; // create a challenge of 256 bits
-//     opts->user_id_b64 = "y1v2BsTzi6baajWpU5WSDw6AYorx2MSDO1iVFSQC8VQ=";
-//     opts->user_name = "Alice";
-//     // TODO: manpage. One of "required", "preferred", "discouraged"
-//     // opts->user_verification = "discouraged";
-//
-//     // SSL_CTX_add_custom_ext(
-//     //     ctx,
-//     //     FIDOSSL_EXT_TYPE,
-//     //     FIDOSSL_CONTEXT,
-//     //     fidossl_server_add_cb,
-//     //     fidossl_server_free_cb,
-//     //     NULL, // No add_args on the server side
-//     //     fidossl_server_parse_cb,
-//     //     opts // Server options are passed as the parse_arg
-//     // );
-//     // Ask for a client certificate in order to trigger the SSL_EXT_TLS1_3_CERTIFICATE event
-//     // SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, no_verify_cb);
-// }
-//
-// int main(int argc, char **argv) {
-//     int sock;
-//     SSL_CTX *ctx;
-//
-//     /* Ignore broken pipe signals */
-//     signal(SIGPIPE, SIG_IGN);
-//
-//     ctx = create_context();
-//
-//     configure_context(ctx);
-//
-//     sock = create_socket(4433);
-//
-//     struct sockaddr_in addr;
-//     unsigned int len = sizeof(addr);
-//     SSL *ssl;
-//     const char reply[] = "TLS tunnel established. hello from server\n";
-//     char buf[160];
-//     size_t readbytes;
-//
-//     int client = accept(sock, (struct sockaddr *)&addr, &len);
-//     if (client < 0) {
-//         perror("Unable to accept");
-//         exit(EXIT_FAILURE);
-//     }
-//
-//     ssl = SSL_new(ctx);
-//     SSL_set_fd(ssl, client);
-//
-//     int ret = SSL_accept(ssl);
-//     printf("SSL_accept returned %d\n", ret);
-//     if (ret < 0) {
-//         printf("Connection failed\n");
-//         ERR_print_errors_fp(stderr);
-//     } else if (ret == 0) {
-//         printf("Connection closed by the client\n");
-//     } else {
-//         printf("Connection established\n");
-//         // int ret = SSL_read_ex(ssl, buf, sizeof(buf), &readbytes);
-//         // if (ret <= 0) {
-//         //     ERR_print_errors_fp(stderr);
-//         // } else if (ret == 0) {
-//         //     printf("Connection closed by the client\n");
-//         // } else {
-//         //     // Write an answer to the client
-//         //     fwrite(buf, 1, readbytes, stdout);
-//         //     SSL_write(ssl, reply, strlen(reply));
-//         // }
-//     }
-//     if (SSL_shutdown(ssl) == 0) {
-//         SSL_shutdown(ssl);
-//     }
-//     // close(client);
-//     // if (!SSL_clear(ssl)) {
-//     //     printf("Failed to clear the SSL object\n");
-//     // }
-//     SSL_free(ssl);
-//     // make new ssl object with same context
-//     ssl = SSL_new(ctx);
-//     SSL_set_fd(ssl, client);
-//
-//
-//     printf("------\n");
-//     // sleep(2);
-//     // client = accept(sock, (struct sockaddr *)&addr, &len);
-//
-//     printf("waiting for SSL_accept %d\n", SSL_accept(ssl));
-//     ret = SSL_accept(ssl);
-//     if (ret < 0){
-//         int ssl_err = SSL_get_error(ssl, ret);
-//         ERR_print_errors_fp(stderr);
-//         printf("SSL_accept returned error %d\n", ssl_err);
-//     } else {
-//         printf("SSL_accept returned %d\n", ret);
-//     }
-//
-//
-//
-//
-//     SSL_shutdown(ssl);
-//     SSL_free(ssl);
-//     close(client);
-//
-//     close(sock);
-//     SSL_CTX_free(ctx);
-// }

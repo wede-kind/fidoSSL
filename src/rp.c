@@ -28,8 +28,7 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
     if (opts->rp_id == NULL) {
         return NULL;
     }
-    // Initialize the debug system. TODO: Consider initing in every callback and
-    // deiniting it the free callback.
+    // Initialize the debug system.
     debug_initialize();
     set_debug_level(opts->debug_level);
 
@@ -155,8 +154,6 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
     offset += 4;
     // If the AT bit is set, parse the attestation credential data. The bit is
     // expected to be set for registration, but not for authentication.
-    // TODO: the check for this bits might be wrong. or the input for authdata
-    // is wrong.
     if (ad->flags & (1 << 6)) {
         // AAGUID
         ad->aaguid_len = 16;
@@ -337,8 +334,6 @@ es256_pk_t *get_public_key(const u8 *cose_key, size_t cose_key_len) {
     // The hardcoded public key is a DER encoded ES256 (ECDSA over P-256) public
     // key. We need to convert it to an EVP_PKEY structure with openssl before
     // libfido2 can convert it to an es256_pk_t structure.
-    // TODO: make this conditional on the public key format and signature
-    // algorithm
 
     // We make a copy of the public key data and length because the decoder will
     // modify the pointers.
@@ -665,7 +660,6 @@ int create_reg_request(struct fido_data *data, const u8 **out,
     struct credential *creds = NULL;
     size_t creds_len = 0;
     if (get_exluded_credentials(data->db, data->user_id, data->user_id_len, &creds, &creds_len) == 0) {
-        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "------->num of excluded creds: %d", creds_len);
         // There exist credentials that should be excluded
         packet.exclude_creds = creds;
         packet.exclude_creds_len = creds_len;

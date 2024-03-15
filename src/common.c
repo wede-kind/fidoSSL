@@ -69,8 +69,8 @@ int aes_gcm_encrypt(const u8 *plain, size_t plain_len, u8 **cypher, size_t *cyph
     EVP_CIPHER_CTX *ctx;
     int len;
     int ciphertext_len;
-    // Hardcoded 12 bytes IV for GCM.
-    // TODO: Do we need a random IV in this context?
+    // Hardcoded IV. We must not generate a new one since the GCM key is only
+    // used once
     u8 *iv = (u8 *)"0123456789012345";
     u8 tag[16]; // GCM Tag
 
