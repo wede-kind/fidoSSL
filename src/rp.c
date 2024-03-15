@@ -56,16 +56,18 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    RP Name: %s", data->rp_name);
 
     // The ticket is base64 encoded, so we decode it
-    if (decode_base64(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
-        0) {
-        debug_printf(
-            DEBUG_LEVEL_ERROR,
-            "Failed to base64 decode user id from the FIDOSSL_SERVER_OPTS");
-        OPENSSL_free(data);
-        return NULL;
+    if (opts->ticket_b64 != NULL) {
+        if (decode_base64(opts->ticket_b64, &data->ticket, &data->ticket_len) !=
+            0) {
+            debug_printf(
+                DEBUG_LEVEL_ERROR,
+                "Failed to base64 decode user id from the FIDOSSL_SERVER_OPTS");
+            OPENSSL_free(data);
+            return NULL;
+        }
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    Ticket: ", data->ticket,
+                        data->ticket_len);
     }
-    debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    Ticket: ", data->ticket,
-                    data->ticket_len);
 
     // Optional data has a default value if not set in the server options
     if (opts->user_verification != 0) {
