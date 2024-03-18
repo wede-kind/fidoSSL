@@ -447,13 +447,24 @@ int verify_clientdata(struct rp_data *data, const char *clientdata_json,
         return -1;
     }
     const char *origin = json_string_value(json_origin);
-    if (strcmp(origin, data->rp_id) != 0) {
-        debug_printf(DEBUG_LEVEL_ERROR, "    Origin is not equal to the rp id");
+    // prepend https:// to the rp id
+    char *rp_id = OPENSSL_malloc(strlen(data->rp_id) + 1 + 8);
+    if (rp_id == NULL) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
         json_decref(root);
         return -1;
-    } else {
-        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    Origin is valid");
     }
+    strcpy(rp_id, "https://");
+    strcat(rp_id, data->rp_id);
+    if (strcmp(origin, rp_id) != 0) {
+        debug_printf(DEBUG_LEVEL_ERROR, "    Origin is not equal to the rp id");
+        json_decref(root);
+        OPENSSL_free(rp_id);
+        return -1;
+    } else {
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    Origin is valid: %s", origin);
+    }
+    OPENSSL_free(rp_id);
 
     // Extract the challenge string
     json_t *json_challenge = json_object_get(root, "challenge");

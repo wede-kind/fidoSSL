@@ -125,7 +125,6 @@ char *get_origin(SSL *ssl) {
         return NULL;
     }
     char *origin = NULL;
-    // TODO: Prepend 'https://'
 
     // The Server Name Indication (SNI) specifies the client's intended
     // destination. If not set, hostname verification relies on SSL_set1_host().
@@ -136,8 +135,10 @@ char *get_origin(SSL *ssl) {
     // Start by probing the SNI
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     if (sni) {
-        origin = OPENSSL_zalloc(strlen(sni) + 1);
-        memcpy(origin, sni, strlen(sni));
+        // +1 for null terminator, +8 for 'https://'
+        origin = OPENSSL_zalloc(strlen(sni) + 1 + 8);
+        memcpy(origin, "https://", 8);
+        memcpy(origin + 8, sni, strlen(sni));
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Origin derived from SNI: %s",
                      origin);
         return origin;
@@ -149,8 +150,9 @@ char *get_origin(SSL *ssl) {
         debug_printf(
             DEBUG_LEVEL_VERBOSE,
             "No SNI set by the client. Falling back to the DNS hostname");
-        origin = OPENSSL_zalloc(strlen(hostname) + 1);
-        memcpy(origin, hostname, strlen(hostname));
+        origin = OPENSSL_zalloc(strlen(hostname) + 1 + 8);
+        memcpy(origin, "https://", 8);
+        memcpy(origin + 8, hostname, strlen(hostname));
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                      "Origin derived from DNS hostname: %s", origin);
         return origin;
