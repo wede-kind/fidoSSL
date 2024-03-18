@@ -48,6 +48,7 @@ int main() {
     // Tell the client which CA should be trusted for server certificate verification
     if (!SSL_CTX_load_verify_locations(ctx, "/opt/homebrew/etc/pki/ca.crt", NULL)) {
         printf("Failed to load CA certificate\n");
+        SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
@@ -67,10 +68,12 @@ int main() {
     // client certificate and a private key
     if (SSL_CTX_use_certificate_file(ctx, "/opt/homebrew/etc/pki/issued/Alice.crt", SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
     if (SSL_CTX_use_PrivateKey_file(ctx, "/opt/homebrew/etc/pki/private/Alice.key", SSL_FILETYPE_PEM) <= 0) {
         ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
@@ -105,6 +108,7 @@ int main() {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
         perror("Socket creation failed");
+        SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
@@ -116,7 +120,8 @@ int main() {
 
     // Connect to server
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
-        perror("Connection failed");
+        perror("Could not connect to socket");
+        SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
@@ -137,6 +142,9 @@ int main() {
     // Do the TLS handshake
     if (SSL_connect(ssl) != 1) {
         print_error();
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
@@ -164,13 +172,12 @@ int main() {
         // Connect to server again
         if (SSL_connect(ssl) != 1) {
             print_error();
-            exit(EXIT_FAILURE);
+        } else {
+            printf("=== Second TLS connection established.\n");
+
+            // Shutdown SSL connection
+            while (SSL_shutdown(ssl) != 1) {}
         }
-
-        printf("=== Second TLS connection established.\n");
-
-        // Shutdown SSL connection
-        while (SSL_shutdown(ssl) != 1) {}
     }
 
     // Clean up

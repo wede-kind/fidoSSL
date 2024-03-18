@@ -164,14 +164,12 @@ int main() {
 
     if (SSL_accept(ssl) != 1) {
         print_error();
-        close(clientfd);
-        close(sockfd);
-        exit(EXIT_FAILURE);
-    }
-    printf("=== Second TLS connection established.\n");
+    } else {
+        printf("=== Second TLS connection established.\n");
 
-    // Shutdown SSL connection
-    while (SSL_shutdown(ssl) != 1) {}
+        // Shutdown SSL connection
+        while (SSL_shutdown(ssl) != 1) {}
+    }
 
     SSL_free(ssl);
     SSL_CTX_free(ctx);

@@ -7,8 +7,8 @@
 typedef unsigned char u8;
 
 typedef enum fido_mode {
-    REGISTER,
-    AUTHENTICATE,
+    REGISTER = 1,
+    AUTHENTICATE = 2,
 } MODE;
 
 // Used for the user_verification and resident_key fields.
@@ -56,6 +56,46 @@ enum fido_state {
     STATE_REG_RESPONSE_RECEIVED,
     STATE_REG_SUCCESS,
     STATE_REG_FAILURE
+};
+
+// TODO: drop the FIDO_ prefix
+enum packet_type {
+    UNDEFINED = 0,
+    FIDO_PRE_REG_INDICATION = 1,
+    FIDO_PRE_REG_REQUEST = 2,
+    FIDO_PRE_REG_RESPONSE = 3,
+    FIDO_REG_INDICATION = 4,
+    FIDO_REG_REQUEST = 5,
+    FIDO_REG_RESPONSE = 6,
+    FIDO_AUTH_INDICATION = 7,
+    FIDO_AUTH_REQUEST = 8,
+    FIDO_AUTH_RESPONSE = 9
+};
+
+struct rp_data {
+    enum fido_state state;
+    u8 *challenge;
+    size_t challenge_len;
+    char *rp_id;
+    char *rp_name;
+    POLICY user_verification;
+    // TODO
+    POLICY user_presence;
+    POLICY resident_key;
+    AUTH_ATTACH auth_attach;
+    TRANSPORT transport;
+    size_t timeout;
+    u8 *user_id;
+    size_t user_id_len;
+    char *user_name;
+    char *user_display_name;
+    u8 *eph_user_id;
+    size_t eph_user_id_len;
+    u8 *gcm_key;
+    size_t gcm_key_len;
+    u8 *ticket;
+    size_t ticket_len;
+    sqlite3 *db;
 };
 
 // TODO: delete
@@ -112,18 +152,30 @@ typedef struct {
     int crv;
 } PublicKey;
 
-// TODO: drop the FIDO_ prefix
-enum packet_type {
-    UNDEFINED = 0,
-    FIDO_PRE_REG_INDICATION = 9,
-    FIDO_PRE_REG_REQUEST = 10,
-    FIDO_PRE_REG_RESPONSE = 11,
-    FIDO_REG_INDICATION = 12,
-    FIDO_REG_REQUEST = 13,
-    FIDO_REG_RESPONSE = 14,
-    FIDO_AUTH_INDICATION = 15,
-    FIDO_AUTH_REQUEST = 16,
-    FIDO_AUTH_RESPONSE = 17
+struct credential {
+    char *type; // e.g. "public-key"
+    u8 *id;
+    size_t id_len;
+    TRANSPORT *transports; // e.g. [ USB, NFC ]
+    size_t transports_len;
+    u8 *pubkey_cose;
+    size_t pubkey_cose_len;
+    int sign_count;
+};
+
+struct authdata {
+    u8 *rp_id_hash;
+    size_t rp_id_hash_len;
+    char flags;
+    int sign_count;
+    u8 *aaguid;
+    size_t aaguid_len;
+    u8 *cred_id;
+    size_t cred_id_len;
+    // The pubkey is a COSE Key. Not DER encoded like in the
+    // AuthenticatorAttestationResponse.
+    u8 *pubkey;
+    size_t pubkey_len;
 };
 
 struct auth_request {
@@ -173,17 +225,6 @@ struct reg_indication {
     size_t eph_user_id_len;
 };
 
-struct credential {
-    char *type; // e.g. "public-key"
-    u8 *id;
-    size_t id_len;
-    TRANSPORT *transports; // e.g. [ USB, NFC ]
-    size_t transports_len;
-    u8 *pubkey_cose;
-    size_t pubkey_cose_len;
-    int sign_count;
-};
-
 struct reg_request {
     // Required fields
     u8 *challenge;
@@ -218,20 +259,7 @@ struct reg_response {
     char *clientdata_json;
 };
 
-struct authdata {
-    u8 *rp_id_hash;
-    size_t rp_id_hash_len;
-    char flags;
-    int sign_count;
-    u8 *aaguid;
-    size_t aaguid_len;
-    u8 *cred_id;
-    size_t cred_id_len;
-    // The pubkey is a COSE Key. Not DER encoded like in the
-    // AuthenticatorAttestationResponse.
-    u8 *pubkey;
-    size_t pubkey_len;
-};
+void free_rp_data(struct rp_data *rp_data);
 
 void free_fido_data(struct fido_data *fido_data);
 

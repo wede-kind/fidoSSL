@@ -198,7 +198,7 @@ int fidossl_server_add_cb(
         return 0; // Silently ignore unknown extensions
     }
     if (context == SSL_EXT_TLS1_3_CERTIFICATE_REQUEST) {
-        struct fido_data *data = get_rp_fido_data(ssl, NULL);
+        struct rp_data *data = get_rp_data(ssl, NULL);
         if (data == NULL) {
             // No FIDO data for this connection. This means that the client
             // does not support the fido extension. This is not an error.
@@ -260,7 +260,7 @@ int fidossl_server_parse_cb(
         return 0; // Silently ignore unknown extensions
     }
     if (context == SSL_EXT_CLIENT_HELLO) {
-        struct fido_data *data = get_rp_fido_data(ssl, parse_arg);
+        struct rp_data *data = get_rp_data(ssl, parse_arg);
         // The server has no state yet and can accept any indication. The
         // process_inication function will set the state accordingly.
         if (process_indication(in, inlen, data) != 0) {
@@ -270,7 +270,7 @@ int fidossl_server_parse_cb(
             return -1;
         }
     } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
-        struct fido_data *data = get_rp_fido_data(ssl, parse_arg);
+        struct rp_data *data = get_rp_data(ssl, parse_arg);
         switch (data->state) {
             case STATE_PRE_REG_REQUEST_SENT:
                 if (process_pre_reg_response(in, inlen, data) != 0) {

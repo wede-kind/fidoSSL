@@ -1,6 +1,23 @@
 #include "types.h"
 #include <openssl/crypto.h>
 
+void free_fido_data(struct fido_data *fido_data) {
+    
+}
+
+void free_rp_data(struct rp_data *rp_data) {
+    OPENSSL_free(rp_data->challenge);
+    OPENSSL_free(rp_data->rp_id);
+    OPENSSL_free(rp_data->rp_name);
+    OPENSSL_free(rp_data->user_id);
+    OPENSSL_free(rp_data->user_name);
+    OPENSSL_free(rp_data->user_display_name);
+    OPENSSL_free(rp_data->eph_user_id);
+    OPENSSL_free(rp_data->gcm_key);
+    OPENSSL_free(rp_data->ticket);
+    OPENSSL_free(rp_data);
+}
+
 void free_auth_request(struct auth_request *auth_request) {
     if (auth_request == NULL) {
         return;

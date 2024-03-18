@@ -18,7 +18,16 @@
 // struct which holds the relying party data.
 static int ctx_data_index = -1;
 
-struct fido_data *init_rp(SSL *ssl, void *server_opts) {
+void free_data(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
+    struct rp_data *data = (struct rp_data *)ptr;
+    if (data == NULL) {
+        return;
+    }
+    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing rp_data");
+    free_rp_data(data);
+}
+
+struct rp_data *init_rp(SSL *ssl, void *server_opts) {
     // Get the server options
     if (server_opts == NULL) {
         return NULL;
@@ -36,13 +45,13 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
         debug_printf(DEBUG_LEVEL_ERROR, "FIDOSSL: A rp id, rp name must be set");
         return NULL;
     }
-    // Create the relying party data. TODO: free all values of fido_data
-    struct fido_data *data = OPENSSL_malloc(sizeof(struct fido_data));
+    // Create the relying party data.
+    struct rp_data *data = OPENSSL_malloc(sizeof(struct rp_data));
     if (data == NULL) {
         debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
         return NULL;
     }
-    memset(data, 0, sizeof(struct fido_data));
+    memset(data, 0, sizeof(struct rp_data));
 
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Configuring Relying Party:");
 
@@ -103,13 +112,21 @@ struct fido_data *init_rp(SSL *ssl, void *server_opts) {
 
     // Save the relying party data to the SSL_CTX object
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
-    ctx_data_index = SSL_CTX_get_ex_new_index(0, "FIDO data", NULL, NULL, NULL);
-    SSL_CTX_set_ex_data(ctx, ctx_data_index, data);
+    ctx_data_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL_CTX, 0, NULL, NULL, NULL, free_data);
+    if (ctx_data_index == -1) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to get ex new index");
+        return NULL;
+    }
+    if (!SSL_CTX_set_ex_data(ctx, ctx_data_index, data)) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to set ex data");
+        free_rp_data(data);
+        return NULL;
+    }
 
     return data;
 }
 
-struct fido_data *get_rp_fido_data(SSL *ssl, void *server_opts) {
+struct rp_data *get_rp_data(SSL *ssl, void *server_opts) {
     if (ctx_data_index == -1) {
         // Relying party is not initialized
         return init_rp(ssl, server_opts);
@@ -375,9 +392,9 @@ es256_pk_t *get_public_key(const u8 *cose_key, size_t cose_key_len) {
     return pk;
 }
 
-int verify_clientdata(struct fido_data *data, const char *clientdata_json,
+int verify_clientdata(struct rp_data *data, const char *clientdata_json,
                       enum fido_mode mode) {
-    // TODO: Drop the jansson dependency and write a custom JSON parser
+    // We could drop the JSON dependency here and parse the client data manually.
     assert(data->challenge != NULL && data->challenge_len != 0 &&
            data->rp_id != NULL);
 
@@ -478,7 +495,7 @@ int verify_clientdata(struct fido_data *data, const char *clientdata_json,
     return 0;
 }
 
-int verify_authdata(struct fido_data *data, struct authdata *authdata,
+int verify_authdata(struct rp_data *data, struct authdata *authdata,
                     enum fido_mode mode, int sign_count) {
     if (data == NULL || authdata == NULL) {
         return -1;
@@ -540,7 +557,7 @@ int verify_authdata(struct fido_data *data, struct authdata *authdata,
     return 0;
 }
 
-int create_pre_reg_request(struct fido_data *data, const u8 **out,
+int create_pre_reg_request(struct rp_data *data, const u8 **out,
                            size_t *out_len) {
     // Create a 16 byte random ephemeral user id
     data->eph_user_id_len = 16;
@@ -569,9 +586,9 @@ int create_pre_reg_request(struct fido_data *data, const u8 **out,
     return build(&packet, FIDO_PRE_REG_REQUEST, out, out_len);
 }
 
-int create_reg_request(struct fido_data *data, const u8 **out,
+int create_reg_request(struct rp_data *data, const u8 **out,
                        size_t *out_len) {
-    // Create a challenge and save it to the fido_data struct
+    // Create a challenge and save it to the rp_data struct
     data->challenge_len = 32; // 256 bits
     if (create_random_bytes(data->challenge_len, &data->challenge) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to create challenge");
@@ -587,7 +604,7 @@ int create_reg_request(struct fido_data *data, const u8 **out,
             "User has already been registered and has a user id: ", data->user_id,
             data->user_id_len);
     } else {
-        // Create a user id and save it to the fido_data struct
+        // Create a user id and save it to the rp_data struct
         data->user_id_len = 16; // 128 bits
         if (create_random_bytes(data->user_id_len, &data->user_id) != 0) {
             debug_printf(DEBUG_LEVEL_ERROR, "Failed to create user id");
@@ -656,7 +673,6 @@ int create_reg_request(struct fido_data *data, const u8 **out,
         packet.auth_sel.user_verification = data->user_verification;
     }
     // Get a list of excluded credentials from the database
-    // TODO: make this configurable
     struct credential *creds = NULL;
     size_t creds_len = 0;
     if (get_exluded_credentials(data->db, data->user_id, data->user_id_len, &creds, &creds_len) == 0) {
@@ -679,9 +695,9 @@ int create_reg_request(struct fido_data *data, const u8 **out,
     return 0;
 }
 
-int create_auth_request(struct fido_data *data, const u8 **out,
+int create_auth_request(struct rp_data *data, const u8 **out,
                         size_t *out_len) {
-    // Create a challenge and save it to the fido_data struct
+    // Create a challenge and save it to the rp_data struct
     data->challenge_len = 32; // 256 bits
     if (create_random_bytes(data->challenge_len, &data->challenge) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to create challenge");
@@ -707,7 +723,7 @@ int create_auth_request(struct fido_data *data, const u8 **out,
     return build(&packet, FIDO_AUTH_REQUEST, out, out_len);
 }
 
-int process_indication(const u8 *in, size_t in_len, struct fido_data *data) {
+int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
     if (in == NULL || in_len == 0) {
         return -1;
     }
@@ -756,7 +772,7 @@ int process_indication(const u8 *in, size_t in_len, struct fido_data *data) {
 }
 
 int process_pre_reg_response(const u8 *in, size_t in_len,
-                             struct fido_data *data) {
+                             struct rp_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
@@ -781,12 +797,12 @@ int process_pre_reg_response(const u8 *in, size_t in_len,
     }
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Client provided a valid ticket");
 
-    // Free the ticket, all other data is stored in the fido_data struct
+    // Free the ticket, all other data is stored in the rp_data struct
     OPENSSL_free(packet.ticket);
     return ret;
 }
 
-int process_reg_response(const u8 *in, size_t in_len, struct fido_data *data) {
+int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
@@ -861,7 +877,7 @@ int process_reg_response(const u8 *in, size_t in_len, struct fido_data *data) {
     return 0;
 }
 
-int process_auth_response(const u8 *in, size_t in_len, struct fido_data *data) {
+int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
