@@ -1,10 +1,6 @@
 #include "types.h"
 #include <openssl/crypto.h>
 
-void free_fido_data(struct fido_data *fido_data) {
-    
-}
-
 void free_rp_data(struct rp_data *rp_data) {
     OPENSSL_free(rp_data->challenge);
     OPENSSL_free(rp_data->rp_id);
@@ -16,6 +12,34 @@ void free_rp_data(struct rp_data *rp_data) {
     OPENSSL_free(rp_data->gcm_key);
     OPENSSL_free(rp_data->ticket);
     OPENSSL_free(rp_data);
+}
+
+void free_ud_data(struct ud_data *ud_data) {
+    OPENSSL_free(ud_data->challenge);
+    OPENSSL_free(ud_data->rp_id);
+    OPENSSL_free(ud_data->rp_name);
+    OPENSSL_free(ud_data->authdata);
+    OPENSSL_free(ud_data->clientdata_json);
+    OPENSSL_free(ud_data->signature);
+    OPENSSL_free(ud_data->user_id);
+    OPENSSL_free(ud_data->user_name);
+    OPENSSL_free(ud_data->user_display_name);
+    OPENSSL_free(ud_data->eph_user_id);
+    OPENSSL_free(ud_data->gcm_key);
+    OPENSSL_free(ud_data->cred_id);
+    OPENSSL_free(ud_data->ticket);
+    if (ud_data->exclude_creds != NULL && ud_data->exclude_creds_len > 0) {
+        for (size_t i = 0; i < ud_data->exclude_creds_len; i++) {
+            OPENSSL_free(ud_data->exclude_creds[i].type);
+            OPENSSL_free(ud_data->exclude_creds[i].id);
+            OPENSSL_free(ud_data->exclude_creds[i].transports);
+            OPENSSL_free(ud_data->exclude_creds[i].pubkey_cose);
+        }
+    }
+    OPENSSL_free(ud_data->exclude_creds);
+    OPENSSL_free(ud_data->pin);
+    OPENSSL_free(ud_data->origin);
+    OPENSSL_free(ud_data->cred_params);
 }
 
 void free_auth_request(struct auth_request *auth_request) {

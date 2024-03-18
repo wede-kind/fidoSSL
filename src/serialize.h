@@ -49,6 +49,4 @@ int parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *out);
 
 void cbor_values_free(struct cbor_values *values);
 
-int cbor_decode_att_obj(const u8 *cbor_data, size_t cbor_data_len, struct fido_data *data);
-
 #endif // SERIALIZE_H

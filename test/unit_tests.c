@@ -1,31 +1,7 @@
 #include "common.h"
 #include "types.h"
-#include "serialize.h"
 #include "debug.h"
 #include "rp.h"
-
-int test_decode_att_obj() {
-    debug_printf(DEBUG_LEVEL_VERBOSE, "TEST: parse_attest_obj");
-    char *cbor_hex = "a363666d74646e6f6e656761747453746d74a06861757468446174615891c46cef82ad1b546477591d008b08759ec3e6d2ecb4f39474bfea6969925d03b74100000002000000000000000000000000000000000030e6e5eee103907ac2f44f60c7997970c147db201d5c83efde152af2bb9532ddad186baae36f883ff579c174d4998e2311a4010103272006215820e6e5eee103907ac2f44f60c799147414dbef7e8a6b01dc1960726bea573202d3";
-    u8 *cbor_data = NULL;
-    size_t cbor_data_len;
-    struct fido_data data;
-
-    hex_to_u8(cbor_hex, &cbor_data, &cbor_data_len);
-    if (cbor_data == NULL) {
-        printf("Error: hex_to_u8\n");
-        return -1;
-    }
-    if (cbor_decode_att_obj(cbor_data, cbor_data_len, &data) != 0) {
-        printf("Failed to parse attestation object\n");
-        return -1;
-    }
-    // debug_printf(DEBUG_LEVEL_VERBOSE, "fmt: %d", data.fmt);
-    debug_print_hex(DEBUG_LEVEL_VERBOSE, "authdata: ", data.authdata, data.authdata_len);
-    // debug_print_hex(DEBUG_LEVEL_VERBOSE, "attstmt: ", data.att_stmt, data.att_stmt_len);
-    puts("");
-    return 0;
-}
 
 int test_parse_authdata() {
     debug_printf(DEBUG_LEVEL_VERBOSE, "TEST: parse_authdata");

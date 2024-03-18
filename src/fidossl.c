@@ -31,7 +31,7 @@ int fidossl_client_add_cb(
         return 0; // Silently ignore unknown extensions
     }
     if (context == SSL_EXT_CLIENT_HELLO) {
-        struct fido_data *data = get_ud_fido_data(ssl, add_arg);
+        struct ud_data *data = get_ud_data(ssl, add_arg);
 
         switch (data->state) {
         case STATE_REG_INITIAL:
@@ -68,7 +68,7 @@ int fidossl_client_add_cb(
             return -1;
         }
     } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
-        struct fido_data *data = get_ud_fido_data(ssl, add_arg);
+        struct ud_data *data = get_ud_data(ssl, add_arg);
 
         switch (data->state) {
         case STATE_PRE_REG_REQUEST_RECEIVED:
@@ -133,7 +133,7 @@ int fidossl_client_parse_cb(
     }
 
     if (context == SSL_EXT_TLS1_3_CERTIFICATE_REQUEST) {
-        struct fido_data *data = get_ud_fido_data(ssl, NULL);
+        struct ud_data *data = get_ud_data(ssl, NULL);
 
         switch (data->state) {
             case STATE_PRE_REG_INDICATION_SENT:

@@ -98,8 +98,7 @@ struct rp_data {
     sqlite3 *db;
 };
 
-// TODO: delete
-struct fido_data {
+struct ud_data {
     enum fido_state state;
     u8 *challenge;
     size_t challenge_len;
@@ -108,7 +107,11 @@ struct fido_data {
     POLICY user_verification;
     POLICY user_presence;
     POLICY resident_key;
+    // This value is not further processed at the client because only
+    // CROSS_PLATFORM is supported.
     AUTH_ATTACH auth_attach;
+    // This value is not further processed at the client because only
+    // USB is supported.
     TRANSPORT transport;
     size_t timeout;
     u8 *authdata;
@@ -126,18 +129,11 @@ struct fido_data {
     size_t gcm_key_len;
     u8 *cred_id;
     size_t cred_id_len;
-    u8 *pubkey;
-    size_t pubkey_len;
-    u8 *att_stmt;
-    size_t att_stmt_len;
     u8 *ticket;
     size_t ticket_len;
     struct credential *exclude_creds;
     size_t exclude_creds_len;
     char *pin;
-    sqlite3 *db;
-
-    // Only used by the client
     char *origin;
     int *cred_params;
     size_t cred_params_len;
@@ -261,7 +257,7 @@ struct reg_response {
 
 void free_rp_data(struct rp_data *rp_data);
 
-void free_fido_data(struct fido_data *fido_data);
+void free_ud_data(struct ud_data *rp_data);
 
 void free_auth_request(struct auth_request *auth_request);
 

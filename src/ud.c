@@ -15,7 +15,17 @@
 // struct which holds the user devise data.
 static int ctx_data_index = -1;
 
-struct fido_data *init_ud(SSL *ssl, void *add_arg) {
+void ud_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
+    struct ud_data *data = (struct ud_data *)ptr;
+    if (data == NULL) {
+        return;
+    }
+    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing all FIDOSSL data that was stored in the SSL_CTX object");
+    free_ud_data(data);
+    debug_cleanup();
+}
+
+struct ud_data *init_ud(SSL *ssl, void *add_arg) {
     // Get the client options
     if (add_arg == NULL) {
         return NULL;
@@ -41,13 +51,13 @@ struct fido_data *init_ud(SSL *ssl, void *add_arg) {
             "FIDOSSL: A user id, pin and ticket must be set for registration");
         return NULL;
     }
-    // Create the user device data. TODO: free
-    struct fido_data *data = OPENSSL_malloc(sizeof(struct fido_data));
+    // Create the user device data
+    struct ud_data *data = OPENSSL_malloc(sizeof(struct ud_data));
     if (data == NULL) {
         debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
         return NULL;
     }
-    memset(data, 0, sizeof(struct fido_data));
+    memset(data, 0, sizeof(struct ud_data));
 
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Configuring Client:");
 
@@ -88,13 +98,21 @@ struct fido_data *init_ud(SSL *ssl, void *add_arg) {
 
     // Save the user device data to the SSL_CTX object
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
-    ctx_data_index = SSL_CTX_get_ex_new_index(0, "FIDO data", NULL, NULL, NULL);
-    SSL_CTX_set_ex_data(ctx, ctx_data_index, data);
+    ctx_data_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL_CTX, 0, NULL, NULL, NULL, ud_free);
+    if (ctx_data_index == -1) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to get ex new index");
+        return NULL;
+    }
+    if (!SSL_CTX_set_ex_data(ctx, ctx_data_index, data)) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to set ex data");
+        free_ud_data(data);
+        return NULL;
+    }
 
     return data;
 }
 
-struct fido_data *get_ud_fido_data(SSL *ssl, void *add_arg) {
+struct ud_data *get_ud_data(SSL *ssl, void *add_arg) {
     if (ctx_data_index == -1) {
         // User device is not initialized
         return init_ud(ssl, add_arg);
@@ -223,7 +241,7 @@ int validate_rp_id(SSL *ssl, const char *origin, const char *rp_id) {
     return -1;
 }
 
-char *generate_clientdata(struct fido_data *data, const char *type) {
+char *generate_clientdata(struct ud_data *data, const char *type) {
     // TODO: Construct client data without using the jansson library
     // See: https://www.w3.org/TR/webauthn-2/#clientdatajson-serialization
     assert(data->challenge != NULL && data->challenge_len != 0 &&
@@ -251,7 +269,7 @@ char *generate_clientdata(struct fido_data *data, const char *type) {
     return cd;
 }
 
-fido_cred_t *create_fido_cred_t(struct fido_data *data) {
+fido_cred_t *create_fido_cred_t(struct ud_data *data) {
     fido_cred_t *cred = fido_cred_new();
     if (cred == NULL) {
         debug_printf(DEBUG_LEVEL_ERROR,
@@ -359,7 +377,7 @@ fido_cred_t *create_fido_cred_t(struct fido_data *data) {
     return cred;
 }
 
-fido_assert_t *create_fido_assert_t(struct fido_data *data) {
+fido_assert_t *create_fido_assert_t(struct ud_data *data) {
     fido_opt_t uv, up;
     fido_assert_t *assert_t = fido_assert_new();
     if (assert_t == NULL) {
@@ -426,7 +444,7 @@ fido_assert_t *create_fido_assert_t(struct fido_data *data) {
     return assert_t;
 }
 
-int run_ctap(struct fido_data *data, enum fido_mode mode) {
+int run_ctap(struct ud_data *data, enum fido_mode mode) {
     fido_assert_t *assert_t = NULL;
     fido_cred_t *cred_t = NULL;
 
@@ -568,7 +586,7 @@ int run_ctap(struct fido_data *data, enum fido_mode mode) {
             break;
         }
     }
-    // Read the output from ctap and store it in the fido_data struct
+    // Read the output from ctap and store it in the ud_data struct
     if (success && mode == REGISTER) {
         data->authdata_len = fido_cred_authdata_raw_len(cred_t);
         data->authdata = OPENSSL_malloc(data->authdata_len);
@@ -613,7 +631,7 @@ int run_ctap(struct fido_data *data, enum fido_mode mode) {
     return success ? 0 : -1;
 }
 
-int create_pre_reg_indication(struct fido_data *data, const u8 **out,
+int create_pre_reg_indication(struct ud_data *data, const u8 **out,
                               size_t *out_len) {
     // The pre-registration indication has no data. It is simply a signal to the
     // server that the user device is ready to start the registration process.
@@ -625,7 +643,7 @@ int create_pre_reg_indication(struct fido_data *data, const u8 **out,
     return 0;
 }
 
-int create_pre_reg_response(struct fido_data *data, SSL *ssl, const u8 **out,
+int create_pre_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
                             size_t *out_len) {
     struct pre_reg_response packet;
     memset(&packet, 0, sizeof(packet));
@@ -637,7 +655,7 @@ int create_pre_reg_response(struct fido_data *data, SSL *ssl, const u8 **out,
     return build(&packet, FIDO_PRE_REG_RESPONSE, out, out_len);
 }
 
-int create_reg_indication(struct fido_data *data, const u8 **out,
+int create_reg_indication(struct ud_data *data, const u8 **out,
                           size_t *out_len) {
     assert(data->eph_user_id != NULL && data->eph_user_id_len != 0);
     struct reg_indication packet;
@@ -647,9 +665,9 @@ int create_reg_indication(struct fido_data *data, const u8 **out,
     return build(&packet, FIDO_REG_INDICATION, out, out_len);
 }
 
-int create_reg_response(struct fido_data *data, SSL *ssl, const u8 **out,
+int create_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
                         size_t *out_len) {
-    // Update fido_data with the origin
+    // Update ud_data with the origin
     data->origin = get_origin(ssl);
 
     // If the RP did not explicitly override the RPID, we default to the origin.
@@ -693,7 +711,7 @@ int create_reg_response(struct fido_data *data, SSL *ssl, const u8 **out,
     return build(&packet, FIDO_REG_RESPONSE, out, out_len);
 }
 
-int create_auth_indication(struct fido_data *data, const u8 **out,
+int create_auth_indication(struct ud_data *data, const u8 **out,
                            size_t *out_len) {
     // The FIDO standard speficifies that the authentication process is started
     // by the REST api call: 'webauthn/authenticate-begin'. In TLS context, we
@@ -701,9 +719,9 @@ int create_auth_indication(struct fido_data *data, const u8 **out,
     return build(NULL, FIDO_AUTH_INDICATION, out, out_len);
 }
 
-int create_auth_response(struct fido_data *data, SSL *ssl, const u8 **out,
+int create_auth_response(struct ud_data *data, SSL *ssl, const u8 **out,
                          size_t *out_len) {
-    // Update fido_data with the origin
+    // Update ud_data with the origin
     data->origin = get_origin(ssl);
 
     // If the RP did not explicitly override the RPID, we default to the origin.
@@ -755,7 +773,7 @@ int create_auth_response(struct fido_data *data, SSL *ssl, const u8 **out,
 }
 
 int process_pre_reg_request(const u8 *in, size_t in_len,
-                            struct fido_data *data) {
+                            struct ud_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
@@ -777,7 +795,7 @@ int process_pre_reg_request(const u8 *in, size_t in_len,
     return 0;
 }
 
-int process_reg_request(const u8 *in, size_t in_len, struct fido_data *data) {
+int process_reg_request(const u8 *in, size_t in_len, struct ud_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
@@ -839,9 +857,6 @@ int process_reg_request(const u8 *in, size_t in_len, struct fido_data *data) {
     if (packet.auth_sel.user_verification != 0) {
         data->user_verification = packet.auth_sel.user_verification;
     }
-    if (packet.auth_sel.user_verification != 0) {
-        data->user_verification = packet.auth_sel.user_verification;
-    }
     if (packet.exclude_creds_len != 0 && packet.exclude_creds) {
         data->exclude_creds = packet.exclude_creds;
         data->exclude_creds_len = packet.exclude_creds_len;
@@ -855,7 +870,7 @@ int process_reg_request(const u8 *in, size_t in_len, struct fido_data *data) {
     return 0;
 }
 
-int process_auth_request(const u8 *in, size_t in_len, struct fido_data *data) {
+int process_auth_request(const u8 *in, size_t in_len, struct ud_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }

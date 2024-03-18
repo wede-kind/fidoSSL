@@ -18,13 +18,14 @@
 // struct which holds the relying party data.
 static int ctx_data_index = -1;
 
-void free_data(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
+void rp_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
     struct rp_data *data = (struct rp_data *)ptr;
     if (data == NULL) {
         return;
     }
-    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing rp_data");
+    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing all FIDOSSL data that was stored in the SSL_CTX object");
     free_rp_data(data);
+    debug_cleanup();
 }
 
 struct rp_data *init_rp(SSL *ssl, void *server_opts) {
@@ -112,7 +113,7 @@ struct rp_data *init_rp(SSL *ssl, void *server_opts) {
 
     // Save the relying party data to the SSL_CTX object
     SSL_CTX *ctx = SSL_get_SSL_CTX(ssl);
-    ctx_data_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL_CTX, 0, NULL, NULL, NULL, free_data);
+    ctx_data_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL_CTX, 0, NULL, NULL, NULL, rp_free);
     if (ctx_data_index == -1) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to get ex new index");
         return NULL;
