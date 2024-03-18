@@ -57,3 +57,4 @@ dkms.conf
 build
 fido2.db
 .cache
+compile_commands.json
