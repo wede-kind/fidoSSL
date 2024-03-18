@@ -158,7 +158,7 @@ SSL_CTX_add_custom_ext(
     FIDOSSL_EXT_TYPE,
     FIDOSSL_CONTEXT,
     fidossl_client_add_cb,
-    fidossl_client_free_cb,
+    NULL,
     opts,
     fidossl_client_parse_cb,
     NULL
@@ -167,7 +167,7 @@ SSL_CTX_add_custom_ext(
 // Create an SSL object and proceed with the connection and TLS handshake as usual
 // Remember to configure SNI and handle the connection appropriately
 
-// In we want to register new fido keys, a second handshake is necessary.
+// If we want to register new fido keys, a second handshake is necessary.
 if (opts->mode == FIDOSSL_REGISTER) {
   
     // Shutdown the first connection
@@ -247,7 +247,7 @@ SSL_CTX_add_custom_ext(
     FIDOSSL_EXT_TYPE,
     FIDOSSL_CONTEXT,
     fidossl_server_add_cb,
-    fidossl_server_free_cb,
+    NULL,
     NULL,
     fidossl_server_parse_cb,
     opts
