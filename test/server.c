@@ -86,7 +86,7 @@ int main() {
         FIDOSSL_EXT_TYPE,
         FIDOSSL_CONTEXT,
         fidossl_server_add_cb,
-        fidossl_server_free_cb,
+        NULL,
         NULL, // No add_args on the server side
         fidossl_server_parse_cb,
         opts // Server options are passed as the parse_arg

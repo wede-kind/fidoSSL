@@ -20,7 +20,7 @@ void ud_free(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, vo
     if (data == NULL) {
         return;
     }
-    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing all FIDOSSL data that was stored in the SSL_CTX object");
+    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Freeing all data allocated by FIDOSSL");
     free_ud_data(data);
     debug_cleanup();
 }

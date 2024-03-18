@@ -3,6 +3,7 @@
 #include "rp.h"
 #include "types.h"
 #include "ud.h"
+#include "common.h"
 #include <fido.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -98,9 +99,9 @@ int fidossl_client_add_cb(
             }
             data->state = STATE_AUTH_RESPONSE_SENT;
             break;
-        // Since the SSL_EXT_TLS1_3_CERTIFICATE context is twice, once for the
-        // server certificate and then for the certificate request, the
-        // following 3 states are ignored
+        // Since the SSL_EXT_TLS1_3_CERTIFICATE context is called twice, once
+        // for the server certificate and then for the certificate request,
+        // the following 3 states are ignored
         case STATE_REG_RESPONSE_SENT:
         case STATE_PRE_REG_RESPONSE_SENT:
         case STATE_AUTH_RESPONSE_SENT:
@@ -111,8 +112,9 @@ int fidossl_client_add_cb(
             return -1;
         }
     } else {
-        // debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s", __func__, get_ssl_ext_context_code(context));
-        return 0;
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s",
+                     __func__, get_ssl_ext_context_code(context));
+        return -1;
     }
     return 1;
 }
@@ -169,18 +171,15 @@ int fidossl_client_parse_cb(
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
-        return 1;
-    } else {
-        // debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s", __func__, get_ssl_ext_context_code(context));
+    } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
+        // Do nothing here. We need that context only in the add cb.
         return 0;
+    } else {
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s",
+                     __func__, get_ssl_ext_context_code(context));
+        return -1;
     }
-}
-
-void fidossl_client_free_cb(SSL *ssl, unsigned int ext_type, unsigned int context,
-                            const unsigned char *out, void *add_arg) {
-    // Clean up the debug system
-    // TODO: where to free?
-    // debug_cleanup();
+    return 1;
 }
 
 int fidossl_server_add_cb(
@@ -238,9 +237,13 @@ int fidossl_server_add_cb(
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
-    } else {
-        // debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s", __func__, get_ssl_ext_context_code(context));
+    } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
+        // Do nothing here. We need that context only in the parse cb.
         return 0;
+    } else {
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s",
+                     __func__, get_ssl_ext_context_code(context));
+        return -1;
     }
     return 1;
 }
@@ -300,7 +303,6 @@ int fidossl_server_parse_cb(
                     *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
-                // TODO state to finish?
                 debug_printf(DEBUG_LEVEL_VERBOSE, "FIDO authentication success!");
                 break;
             default:
@@ -310,20 +312,16 @@ int fidossl_server_parse_cb(
                 return -1;
         }
     } else {
-        // debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s", __func__, get_ssl_ext_context_code(context));
-        return 0;
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Unhandeled context event in %s: %s",
+                     __func__, get_ssl_ext_context_code(context));
+        return -1;
     }
     return 1;
 }
 
-void fidossl_server_free_cb(SSL *ssl, unsigned int ext_type, unsigned int context,
-                            const unsigned char *out, void *add_arg) {
-    // Clean up the debug system
-    // debug_cleanup();
-}
-
-// TOOD: delete
 int no_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
-    // Don't validae the vertificate
+    // Don't validae the client certificate.
+    // The client certificate request is necessary to trigger the fido extension
+    // but fido authentication replaces the client certificate authentication.
     return 1;
 }

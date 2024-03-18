@@ -91,7 +91,7 @@ int main() {
         FIDOSSL_EXT_TYPE,
         FIDOSSL_CONTEXT,
         fidossl_client_add_cb,
-        fidossl_client_free_cb,
+        NULL,
         // void * add_arg is a pointer to arbitrary data that you can use within
         // your add_cb function.
         opts,
