@@ -70,16 +70,12 @@ int main() {
     opts->rp_id = "demo.fido2.tls.edu";
     opts->rp_name = "Demo Fido2 TLS";
     opts->ticket_b64 = "y1v2BsTzi6baajWpU5WSDw6AYorx2MSDO1iVFSQC8VQ=";
-    // TODO: When user verification is changed while createing the asster_t, it
-    // does not work anymore. why?
     opts->user_verification = PREFERRED;
     opts->resident_key = REQUIRED;
     opts->auth_attach = CROSS_PLATFORM;
     opts->transport = USB;
     opts->timeout = 60000; // 1 Minute
     opts->debug_level = DEBUG_LEVEL_MORE_VERBOSE;
-
-    // TODO: Write the manpage
 
     SSL_CTX_add_custom_ext(
         ctx,

@@ -32,25 +32,29 @@
 #define RPID 2
 #define USER_VERIFICATION 3
 
+// Buf size is limited by the TLS record size (~16KB). For the fido protocol
+// however, 128 bytes should be enough for the largest packet.
+#define BUF_SIZE 2000
+
 const char *get_package_type_name(unsigned int type) {
     switch (type) {
-    case FIDO_PRE_REG_INDICATION:
+    case PKT_PRE_REG_INDICATION:
         return "PRE_REG_INDICATION";
-    case FIDO_PRE_REG_REQUEST:
+    case PKT_PRE_REG_REQUEST:
         return "PRE_REG_REQUEST";
-    case FIDO_PRE_REG_RESPONSE:
+    case PKT_PRE_REG_RESPONSE:
         return "PRE_REG_RESPONSE";
-    case FIDO_REG_INDICATION:
+    case PKT_REG_INDICATION:
         return "REG_INDICATION";
-    case FIDO_REG_REQUEST:
+    case PKT_REG_REQUEST:
         return "REG_REQUEST";
-    case FIDO_REG_RESPONSE:
+    case PKT_REG_RESPONSE:
         return "REG_RESPONSE";
-    case FIDO_AUTH_INDICATION:
+    case PKT_AUTH_INDICATION:
         return "AUTH_INDICATION";
-    case FIDO_AUTH_REQUEST:
+    case PKT_AUTH_REQUEST:
         return "AUTH_REQUEST";
-    case FIDO_AUTH_RESPONSE:
+    case PKT_AUTH_RESPONSE:
         return "AUTH_RESPONSE";
     default:
         return "Unknown Type";
@@ -96,11 +100,11 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
     debug_printf(DEBUG_LEVEL_VERBOSE, "Received packet: %s",
                  get_package_type_name(*type));
     switch (*type) {
-    case FIDO_PRE_REG_INDICATION: {
+    case PKT_PRE_REG_INDICATION: {
         out = NULL;
         break;
     }
-    case FIDO_PRE_REG_REQUEST: {
+    case PKT_PRE_REG_REQUEST: {
         if (array_len < 3) {
             debug_printf(DEBUG_LEVEL_ERROR, "Malformed pre-reg request");
             goto err;
@@ -134,7 +138,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                         p->gcm_key_len);
         break;
     }
-    case FIDO_PRE_REG_RESPONSE: {
+    case PKT_PRE_REG_RESPONSE: {
         if (array_len < 4) {
             debug_printf(DEBUG_LEVEL_ERROR, "Malformed pre-reg response");
             goto err;
@@ -176,7 +180,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                         p->ticket_len);
         break;
     }
-    case FIDO_REG_INDICATION: {
+    case PKT_REG_INDICATION: {
         if (array_len < 1) {
             debug_printf(DEBUG_LEVEL_ERROR, "Malformed reg indication");
             goto err;
@@ -201,7 +205,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                         p->eph_user_id_len);
         break;
     }
-    case FIDO_REG_REQUEST: {
+    case PKT_REG_REQUEST: {
         if (array_len < 8) {
             debug_printf(DEBUG_LEVEL_ERROR, "Malformed reg request");
             goto err;
@@ -431,7 +435,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
         }
         break;
     }
-    case FIDO_REG_RESPONSE: {
+    case PKT_REG_RESPONSE: {
         if (array_len < 2) {
             debug_printf(DEBUG_LEVEL_ERROR, "Malformed reg response");
             goto err;
@@ -462,11 +466,11 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                      p->clientdata_json);
         break;
     }
-    case FIDO_AUTH_INDICATION: {
+    case PKT_AUTH_INDICATION: {
         out = NULL;
         break;
     }
-    case FIDO_AUTH_REQUEST: {
+    case PKT_AUTH_REQUEST: {
         struct auth_request *p = (struct auth_request *)out;
         if (!p) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed!");
@@ -544,7 +548,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
         }
         break;
     }
-    case FIDO_AUTH_RESPONSE: {
+    case PKT_AUTH_RESPONSE: {
         struct auth_response *p = (struct auth_response *)out;
         if (!p) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed!");
@@ -618,9 +622,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
           size_t *out_len) {
     assert(type != UNDEFINED);
 
-    // TODO: make this a constant, mention it in thesis that is is theoreticaly
-    // constaint by the TLS record size.
-    u8 *buf = OPENSSL_zalloc(1500);
+    u8 *buf = OPENSSL_zalloc(BUF_SIZE);
     if (!buf) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Could not allocate memory for CBOR encoding");
@@ -633,19 +635,19 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
     debug_printf(DEBUG_LEVEL_VERBOSE, "Sending packet: %s",
                  get_package_type_name(type));
     switch (type) {
-    case FIDO_PRE_REG_INDICATION: {
+    case PKT_PRE_REG_INDICATION: {
         // Encode just the packet type
         cbor_encoder_create_array(&encoder, &array, 1);
-        cbor_encode_int(&array, FIDO_PRE_REG_INDICATION);
+        cbor_encode_int(&array, PKT_PRE_REG_INDICATION);
         break;
     }
-    case FIDO_PRE_REG_REQUEST: {
+    case PKT_PRE_REG_REQUEST: {
         struct pre_reg_request *in = (struct pre_reg_request *)input;
         assert(in->eph_user_id != NULL && in->eph_user_id_len != 0 &&
                in->gcm_key != NULL && in->gcm_key_len != 0);
         // Required fields are packet type, eph_user_id and gcm_key
         cbor_encoder_create_array(&encoder, &array, 3);
-        cbor_encode_int(&array, FIDO_PRE_REG_REQUEST);
+        cbor_encode_int(&array, PKT_PRE_REG_REQUEST);
         cbor_encode_byte_string(&array, in->eph_user_id, in->eph_user_id_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
                         "    eph user id: ", in->eph_user_id,
@@ -655,14 +657,14 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
                         in->gcm_key_len);
         break;
     }
-    case FIDO_PRE_REG_RESPONSE: {
+    case PKT_PRE_REG_RESPONSE: {
         struct pre_reg_response *in = (struct pre_reg_response *)input;
         assert(in->user_name != NULL && in->user_display_name != NULL &&
                in->ticket != NULL && in->ticket_len != 0);
         // Required fields are packet type, user_name, user_display_name and
         // ticket
         cbor_encoder_create_array(&encoder, &array, 4);
-        cbor_encode_int(&array, FIDO_PRE_REG_RESPONSE);
+        cbor_encode_int(&array, PKT_PRE_REG_RESPONSE);
         cbor_encode_text_stringz(&array, in->user_name);
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user name: %s", in->user_name);
         cbor_encode_text_stringz(&array, in->user_display_name);
@@ -672,19 +674,19 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    ticket: ", in->ticket, in->ticket_len);
         break;
     }
-    case FIDO_REG_INDICATION: {
+    case PKT_REG_INDICATION: {
         struct reg_indication *in = (struct reg_indication *)input;
         assert(in->eph_user_id != NULL && in->eph_user_id_len != 0);
         // Required fields are packet type and eph_user_id
         cbor_encoder_create_array(&encoder, &array, 2);
-        cbor_encode_int(&array, FIDO_REG_INDICATION);
+        cbor_encode_int(&array, PKT_REG_INDICATION);
         cbor_encode_byte_string(&array, in->eph_user_id, in->eph_user_id_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
                         "    eph user id: ", in->eph_user_id,
                         in->eph_user_id_len);
         break;
     }
-    case FIDO_REG_REQUEST: {
+    case PKT_REG_REQUEST: {
         struct reg_request *in = (struct reg_request *)input;
         assert(in->challenge != NULL && in->challenge_len > 0 &&
                in->rp_id != NULL && in->rp_name != NULL &&
@@ -711,7 +713,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         // pubkey_cred_params. If there are optional parameters, the last field
         // of the arrays is a map
         cbor_encoder_create_array(&encoder, &array, num_optionals > 0 ? 9 : 8);
-        cbor_encode_int(&array, FIDO_REG_REQUEST);
+        cbor_encode_int(&array, PKT_REG_REQUEST);
         cbor_encode_byte_string(&array, in->challenge, in->challenge_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    challenge: ", in->challenge,
                         in->challenge_len);
@@ -811,13 +813,13 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         }
         break;
     }
-    case FIDO_REG_RESPONSE: {
+    case PKT_REG_RESPONSE: {
         struct reg_response *in = (struct reg_response *)input;
         assert(in->authdata != NULL && in->authdata_len != 0 &&
                in->clientdata_json != NULL);
         // Required fields are packet type, att_obj and clientdata_json
         cbor_encoder_create_array(&encoder, &array, 3);
-        cbor_encode_int(&array, FIDO_REG_RESPONSE);
+        cbor_encode_int(&array, PKT_REG_RESPONSE);
         cbor_encode_byte_string(&array, in->authdata, in->authdata_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
                         "    authenticator data: ", in->authdata,
@@ -827,13 +829,13 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
                      in->clientdata_json);
         break;
     }
-    case FIDO_AUTH_INDICATION: {
+    case PKT_AUTH_INDICATION: {
         // Encode just the packet type
         cbor_encoder_create_array(&encoder, &array, 1);
-        cbor_encode_int(&array, FIDO_AUTH_INDICATION);
+        cbor_encode_int(&array, PKT_AUTH_INDICATION);
         break;
     }
-    case FIDO_AUTH_REQUEST: {
+    case PKT_AUTH_REQUEST: {
         struct auth_request *in = (struct auth_request *)input;
         assert(in->challenge != NULL && in->challenge_len > 0);
         // Count optional parameters
@@ -847,7 +849,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         // Required fields are packet type and challenge. The last field of the
         // array is a map if there are optional parameters
         cbor_encoder_create_array(&encoder, &array, num_optionals > 0 ? 3 : 2);
-        cbor_encode_int(&array, FIDO_AUTH_REQUEST);
+        cbor_encode_int(&array, PKT_AUTH_REQUEST);
         cbor_encode_byte_string(&array, in->challenge, in->challenge_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    challenge: ", in->challenge,
                         in->challenge_len);
@@ -878,7 +880,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         }
         break;
     }
-    case FIDO_AUTH_RESPONSE: {
+    case PKT_AUTH_RESPONSE: {
         struct auth_response *in = (struct auth_response *)input;
         assert(in->authdata != NULL && in->authdata_len != 0 &&
                in->clientdata_json != NULL && in->signature != NULL &&
@@ -888,7 +890,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         // Required fields are packet type, clientdata_json, authdata, signature
         // user_id and cred_id
         cbor_encoder_create_array(&encoder, &array, 6);
-        cbor_encode_int(&array, FIDO_AUTH_RESPONSE);
+        cbor_encode_int(&array, PKT_AUTH_RESPONSE);
         cbor_encode_text_stringz(&array, in->clientdata_json);
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    clientdata: %s",
                      in->clientdata_json);

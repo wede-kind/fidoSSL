@@ -584,7 +584,7 @@ int create_pre_reg_request(struct rp_data *data, const u8 **out,
     packet.gcm_key = data->gcm_key;
     packet.gcm_key_len = data->gcm_key_len;
 
-    return cbor_build(&packet, FIDO_PRE_REG_REQUEST, out, out_len);
+    return cbor_build(&packet, PKT_PRE_REG_REQUEST, out, out_len);
 }
 
 int create_reg_request(struct rp_data *data, const u8 **out,
@@ -683,7 +683,7 @@ int create_reg_request(struct rp_data *data, const u8 **out,
     }
 
     // Encode the packet to CBOR
-    if (cbor_build(&packet, FIDO_REG_REQUEST, out, out_len) != 0) {
+    if (cbor_build(&packet, PKT_REG_REQUEST, out, out_len) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to build registration request");
         return -1;
     }
@@ -721,7 +721,7 @@ int create_auth_request(struct rp_data *data, const u8 **out,
     if (data->user_verification != 0) {
         packet.user_verification = data->user_verification;
     }
-    return cbor_build(&packet, FIDO_AUTH_REQUEST, out, out_len);
+    return cbor_build(&packet, PKT_AUTH_REQUEST, out, out_len);
 }
 
 int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
@@ -735,10 +735,10 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
         return -1;
     }
     // Pre reg indication has no data. We simply set the new state
-    if (data->state == STATE_INITIAL && type == FIDO_PRE_REG_INDICATION) {
+    if (data->state == STATE_INITIAL && type == PKT_PRE_REG_INDICATION) {
         data->state = STATE_PRE_REG_INDICATION_RECEIVED;
     } else if (data->state == STATE_PRE_REG_RESPONSE_RECEIVED &&
-               type == FIDO_REG_INDICATION) {
+               type == PKT_REG_INDICATION) {
         // The reg indication consists of the ephemeral user ID. We must check
         // if the client provided the correct ephemeral user id.
         if (data->eph_user_id_len != packet.eph_user_id_len ||
@@ -754,7 +754,7 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
         data->state = STATE_REG_INDICATION_RECEIVED;
     }
     // Again, the auth indication has no data. We simply set the state
-    else if (data->state == STATE_INITIAL && type == FIDO_AUTH_INDICATION) {
+    else if (data->state == STATE_INITIAL && type == PKT_AUTH_INDICATION) {
         // Check if a database exists
         struct stat buffer;
         if (stat("fido2.db", &buffer) != 0) {
@@ -780,7 +780,7 @@ int process_pre_reg_response(const u8 *in, size_t in_len,
     int ret = 0;
     struct pre_reg_response packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_PRE_REG_RESPONSE;
+    enum packet_type type = PKT_PRE_REG_RESPONSE;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse pre-registration request");
@@ -809,7 +809,7 @@ int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     }
     struct reg_response packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_REG_RESPONSE;
+    enum packet_type type = PKT_REG_RESPONSE;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse registration response");
@@ -884,7 +884,7 @@ int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) {
     }
     struct auth_response packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_AUTH_RESPONSE;
+    enum packet_type type = PKT_AUTH_RESPONSE;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse authentication response");

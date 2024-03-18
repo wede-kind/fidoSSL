@@ -52,15 +52,10 @@ int main(int argc, char *argv[]) {
     debug_initialize();
     set_debug_level(DEBUG_LEVEL_MORE_VERBOSE);
 
-    // if (test_decode_att_obj() != 0) {
-    //     printf("Error: test_parse_attest_obj\n");
-    //     return -1;
-    // }
-    // 
-    // if (test_parse_authdata() != 0) {
-    //     printf("Error: test_parse_authdata\n");
-    //     return -1;
-    // }
+    if (test_parse_authdata() != 0) {
+        printf("Error: test_parse_authdata\n");
+        return -1;
+    }
 
     if (test_parse_cose_key() != 0) {
         printf("Error: test_parse_cose_key\n");

@@ -33,8 +33,7 @@ struct ud_data *init_ud(SSL *ssl, void *add_arg) {
     // Validate client options
     struct fidossl_client_opts *opts = (struct fidossl_client_opts *)add_arg;
 
-    // Initialize the debug system. TODO: Consider initing in every callback and
-    // deiniting it the free callback.
+    // Initialize the debug system.
     debug_initialize();
     set_debug_level(opts->debug_level);
 
@@ -132,7 +131,7 @@ char *get_origin(SSL *ssl) {
     // destination. If not set, hostname verification relies on SSL_set1_host().
     // Absence of both SNI and a manually set hostname prevents server
     // certificate validation. Since server certificate validation is crucial
-    // for FIDO, we enforce the use of SNI or a manually set hostname.
+    // for FIDO, we enforce the use of SNI.
 
     // Start by probing the SNI
     const char *sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
@@ -163,7 +162,7 @@ char *get_origin(SSL *ssl) {
 
 int is_equal_or_registrable_domain_suffix(const char *host,
                                           const char *host_suffix) {
-    // TODO: For now, we only check for equality
+    // For now, we only check for equality
     return strcmp(host, host_suffix);
 }
 
@@ -242,7 +241,10 @@ int validate_rp_id(SSL *ssl, const char *origin, const char *rp_id) {
 }
 
 char *generate_clientdata(struct ud_data *data, const char *type) {
-    // TODO: Construct client data without using the jansson library
+    // It is possible to drop the libjansson dependency and use a simple
+    // string builder to generate the client data. However, the client data
+    // is a JSON object and libjansson provides a convenient way to build
+    // JSON objects.
     // See: https://www.w3.org/TR/webauthn-2/#clientdatajson-serialization
     assert(data->challenge != NULL && data->challenge_len != 0 &&
            data->origin != NULL);
@@ -304,7 +306,8 @@ fido_cred_t *create_fido_cred_t(struct ud_data *data) {
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    User display name: %s",
                  data->user_display_name);
 
-    // TODO: Improve this
+    // For now, we only support ES256 but other algorithms can be added
+    // in the future
     int cose_alg = data->cred_params[0];
     if (fido_cred_set_type(cred, cose_alg) != FIDO_OK) {
         debug_printf(DEBUG_LEVEL_ERROR,
@@ -465,11 +468,6 @@ int run_ctap(struct ud_data *data, enum fido_mode mode) {
         return -1;
     }
 
-    // TODO: what if no fido token is available? Print and return appropriate
-    // error code
-
-    // TODO: exluded credentials
-
     fido_dev_info_t *devlist;
     size_t ndevs;
     fido_dev_t *fido_dev;
@@ -549,7 +547,6 @@ int run_ctap(struct ud_data *data, enum fido_mode mode) {
             printf("Please touch the FIDO token\n");
         }
 
-        // TODO: how to handle the PIN?
         int ret = -1;
         if (mode == REGISTER) {
             ret = fido_dev_make_cred(fido_dev, cred_t, data->pin);
@@ -635,7 +632,7 @@ int create_pre_reg_indication(struct ud_data *data, const u8 **out,
                               size_t *out_len) {
     // The pre-registration indication has no data. It is simply a signal to the
     // server that the user device is ready to start the registration process.
-    if (cbor_build(NULL, FIDO_PRE_REG_INDICATION, out, out_len) != 0) {
+    if (cbor_build(NULL, PKT_PRE_REG_INDICATION, out, out_len) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to build pre-registration indication");
         return -1;
@@ -652,7 +649,7 @@ int create_pre_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
     packet.ticket = data->ticket;
     packet.ticket_len = data->ticket_len;
 
-    return cbor_build(&packet, FIDO_PRE_REG_RESPONSE, out, out_len);
+    return cbor_build(&packet, PKT_PRE_REG_RESPONSE, out, out_len);
 }
 
 int create_reg_indication(struct ud_data *data, const u8 **out,
@@ -662,7 +659,7 @@ int create_reg_indication(struct ud_data *data, const u8 **out,
     memset(&packet, 0, sizeof(packet));
     packet.eph_user_id = data->eph_user_id;
     packet.eph_user_id_len = data->eph_user_id_len;
-    return cbor_build(&packet, FIDO_REG_INDICATION, out, out_len);
+    return cbor_build(&packet, PKT_REG_INDICATION, out, out_len);
 }
 
 int create_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
@@ -708,7 +705,7 @@ int create_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
     packet.authdata_len = data->authdata_len;
     packet.clientdata_json = data->clientdata_json;
 
-    return cbor_build(&packet, FIDO_REG_RESPONSE, out, out_len);
+    return cbor_build(&packet, PKT_REG_RESPONSE, out, out_len);
 }
 
 int create_auth_indication(struct ud_data *data, const u8 **out,
@@ -716,7 +713,7 @@ int create_auth_indication(struct ud_data *data, const u8 **out,
     // The FIDO standard speficifies that the authentication process is started
     // by the REST api call: 'webauthn/authenticate-begin'. In TLS context, we
     // indicate the start of the authentication by the packet type.
-    return cbor_build(NULL, FIDO_AUTH_INDICATION, out, out_len);
+    return cbor_build(NULL, PKT_AUTH_INDICATION, out, out_len);
 }
 
 int create_auth_response(struct ud_data *data, SSL *ssl, const u8 **out,
@@ -769,7 +766,7 @@ int create_auth_response(struct ud_data *data, SSL *ssl, const u8 **out,
     packet.cred_id = data->cred_id;
     packet.cred_id_len = data->cred_id_len;
 
-    return cbor_build(&packet, FIDO_AUTH_RESPONSE, out, out_len);
+    return cbor_build(&packet, PKT_AUTH_RESPONSE, out, out_len);
 }
 
 int process_pre_reg_request(const u8 *in, size_t in_len,
@@ -779,7 +776,7 @@ int process_pre_reg_request(const u8 *in, size_t in_len,
     }
     struct pre_reg_request packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_PRE_REG_REQUEST;
+    enum packet_type type = PKT_PRE_REG_REQUEST;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse pre-registration request");
@@ -801,7 +798,7 @@ int process_reg_request(const u8 *in, size_t in_len, struct ud_data *data) {
     }
     struct reg_request packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_REG_REQUEST;
+    enum packet_type type = PKT_REG_REQUEST;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse registration request");
         return -1;
@@ -876,7 +873,7 @@ int process_auth_request(const u8 *in, size_t in_len, struct ud_data *data) {
     }
     struct auth_request packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = FIDO_AUTH_REQUEST;
+    enum packet_type type = PKT_AUTH_REQUEST;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse authentication request");
