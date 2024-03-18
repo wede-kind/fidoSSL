@@ -1,7 +1,11 @@
 CC = cc
+
+# Detect operating system
+UNAME_S := $(shell uname -s)
+
 # Specify compile flags, library paths and libraries to link against for the
 # fido extension (which will be a static library on its own).
-PROJECT_CFLAGS = -I./libs/tinycbor/src -I/usr/include -I/opt/homebrew/include -g -Wall
+PROJECT_CFLAGS = -I./libs/tinycbor/src -g -Wall
 
 PROJECT_SRC = $(wildcard src/*.c)
 PROJECT_OBJ = $(patsubst src/%.c, build/obj/%.o, $(PROJECT_SRC))
@@ -9,9 +13,25 @@ PROJECT_TARGET = build/libfidossl.a
 
 # Specify compile flags, library paths and libraries to link against for the
 # test prorgams (client and server).
-TEST_CFLAGS = -I/usr/include -I/opt/homebrew/include -I./libs/tinycbor/src -I./src -g -Wall
-TEST_LDFLAGS =  -L./build -L/usr/lib/aarch64-linux-gnu -L./libs/tinycbor/lib -L/opt/homebrew/lib
+TEST_CFLAGS = -I./libs/tinycbor/src -I./src -g -Wall
+TEST_LDFLAGS = -L./build -L./libs/tinycbor/lib
 TEST_LDLIBS = -lfidossl -lcrypto -lssl -lfido2 -ltinycbor -ljansson -lsqlite3
+
+ifeq ($(UNAME_S),Linux)
+	ifneq ($(wildcard /usr/lib/aarch64-linux-gnu/*),)
+		TEST_LDFLAGS += -L/usr/lib/aarch64-linux-gnu
+		TEST_CFLAGS += -I/usr/include
+		PROJECT_CFLAGS += -I/usr/include
+	endif
+endif
+
+ifeq ($(UNAME_S),Darwin)
+	ifneq ($(wildcard /opt/homebrew/include/*),)
+		TEST_LDFLAGS += -L/opt/homebrew/lib
+		PROJECT_CFLAGS += -I/opt/homebrew/include
+		TEST_CFLAGS += -I/opt/homebrew/include
+	endif
+endif
 
 TEST_CLIENT_SRC = test/client.c
 TEST_SERVER_SRC = test/server.c
