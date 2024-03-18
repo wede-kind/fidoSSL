@@ -19,6 +19,31 @@
 
 #define SERVER_PORT 12345
 
+void print_error() {
+    unsigned long err_code;
+    while ((err_code = ERR_get_error()) != 0) {
+        int reason = ERR_GET_REASON(err_code);
+        if (reason == SSL_R_TLSV1_ALERT_ACCESS_DENIED) {
+            // This alert is send from the other peer if the FIDO operation
+            // failed
+            printf("Peer signaled FIDO operation failed\n");
+        } else if (reason == SSL_AD_ACCESS_DENIED) {
+            // This alert is pushed to the error stack if the FIDO operation
+            // failed on this peer
+            printf("FIDO operation failed\n");
+        } else if (reason == SSL_R_CALLBACK_FAILED || reason == SSL_R_BAD_EXTENSION) {
+            // Do nothing here. If the extension fails, this errors are always
+            // part of the error stack but not descriptive.
+        } else if (reason == SSL_R_UNEXPECTED_EOF_WHILE_READING) {
+            printf("Peer disconnected\n");
+        } else {
+            // Generic error handling
+            const char *error_string = ERR_reason_error_string(err_code);
+            printf("Failed with reason: %d. Error: %s\n", reason, error_string);
+        }
+    }
+}
+
 int main() {
     SSL_CTX *ctx;
     SSL *ssl;
@@ -121,8 +146,9 @@ int main() {
     ssl = SSL_new(ctx);
     SSL_set_fd(ssl, clientfd);
     if (SSL_accept(ssl) != 1) {
-        printf("SSL_accept failed\n");
-        ERR_print_errors_fp(stderr);
+        print_error();
+        close(clientfd);
+        close(sockfd);
         exit(EXIT_FAILURE);
     }
 
@@ -137,12 +163,11 @@ int main() {
     SSL_set_fd(ssl, clientfd);
 
     if (SSL_accept(ssl) != 1) {
-        // ERR_print_errors_fp(stderr);
+        print_error();
         close(clientfd);
         close(sockfd);
         exit(EXIT_FAILURE);
     }
-
     printf("=== Second TLS connection established.\n");
 
     // Shutdown SSL connection

@@ -205,7 +205,8 @@ int get_exluded_credentials(sqlite3 *db, const u8 *user_id, size_t user_id_len,
         cred->type = strdup((const char *)sqlite3_column_text(stmt, 1));
         (*creds_len)++;
     }
-    printf("Number of excluded credentials: %zu\n", *creds_len);
+    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Number of excluded credentials: %zu",
+                 *creds_len);
 
     sqlite3_finalize(stmt);
     return 0; // Success

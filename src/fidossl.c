@@ -36,27 +36,34 @@ int fidossl_client_add_cb(
         switch (data->state) {
         case STATE_REG_INITIAL:
             if (create_pre_reg_indication(data, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create pre registration indication");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration indication");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
             }
             data->state = STATE_PRE_REG_INDICATION_SENT;
             break;
         case STATE_PRE_REG_RESPONSE_SENT:
             if (create_reg_indication(data, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create registration indication");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create registration indication");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
             }
             data->state = STATE_REG_INDICATION_SENT;
             break;
         case STATE_AUTH_INITIAL:
             if (create_auth_indication(data, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create authentication indication");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create authentication indication");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
+                *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
             }
             data->state = STATE_AUTH_INDICATION_SENT;
             break;
         default:
             debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+            ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
             *al = SSL_AD_INTERNAL_ERROR;
             return -1;
         }
@@ -66,21 +73,27 @@ int fidossl_client_add_cb(
         switch (data->state) {
         case STATE_PRE_REG_REQUEST_RECEIVED:
             if (create_pre_reg_response(data, ssl, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create pre registration response");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration response");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                *al = SSL_AD_ACCESS_DENIED;
                 return -1;
             }
             data->state = STATE_PRE_REG_RESPONSE_SENT;
             break;
         case STATE_REG_REQUEST_RECEIVED:
             if (create_reg_response(data, ssl, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create registration response");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create registration response");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                *al = SSL_AD_ACCESS_DENIED;
                 return -1;
             }
             data->state = STATE_REG_RESPONSE_SENT;
             break;
         case STATE_AUTH_REQUEST_RECEIVED:
             if (create_auth_response(data, ssl, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_ERROR, "Failed to create authentication response");
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create authentication response");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                *al = SSL_AD_ACCESS_DENIED;
                 return -1;
             }
             data->state = STATE_AUTH_RESPONSE_SENT;
@@ -125,27 +138,34 @@ int fidossl_client_parse_cb(
         switch (data->state) {
             case STATE_PRE_REG_INDICATION_SENT:
                 if (process_pre_reg_request(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to process pre registration request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to process pre registration request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_PRE_REG_REQUEST_RECEIVED;
                 break;
             case STATE_REG_INDICATION_SENT:
                 if (process_reg_request(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to process registration request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to process registration request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_REG_REQUEST_RECEIVED;
                 break;
             case STATE_AUTH_INDICATION_SENT:
                 if (process_auth_request(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to process authentication request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to process authentication request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_AUTH_REQUEST_RECEIVED;
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
@@ -187,27 +207,34 @@ int fidossl_server_add_cb(
         switch (data->state) {
             case STATE_PRE_REG_INDICATION_RECEIVED:
                 if (create_pre_reg_request(data, out, outlen) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to create pre registration request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_PRE_REG_REQUEST_SENT;
                 break;
             case STATE_REG_INDICATION_RECEIVED:
                 if (create_reg_request(data, out, outlen) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to create registration request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create registration request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_REG_REQUEST_SENT;
                 break;
             case STATE_AUTH_INDICATION_RECEIVED:
                 if (create_auth_request(data, out, outlen) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to create authentication request");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create authentication request");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_AUTH_REQUEST_SENT;
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }
@@ -237,7 +264,9 @@ int fidossl_server_parse_cb(
         // The server has no state yet and can accept any indication. The
         // process_inication function will set the state accordingly.
         if (process_indication(in, inlen, data) != 0) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse FIDO indication");
+            debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse FIDO indication");
+            ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+            *al = SSL_AD_ACCESS_DENIED;
             return -1;
         }
     } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
@@ -245,7 +274,9 @@ int fidossl_server_parse_cb(
         switch (data->state) {
             case STATE_PRE_REG_REQUEST_SENT:
                 if (process_pre_reg_response(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse pre registration response");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse pre registration response");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 data->state = STATE_PRE_REG_RESPONSE_RECEIVED;
@@ -254,7 +285,9 @@ int fidossl_server_parse_cb(
                 break;
             case STATE_REG_REQUEST_SENT:
                 if (process_reg_response(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse registration response");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse registration response");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 // data->state = STATE_REG_SUCCESS;
@@ -262,7 +295,9 @@ int fidossl_server_parse_cb(
                 break;
             case STATE_AUTH_REQUEST_SENT:
                 if (process_auth_response(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse authenticaton response");
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse authenticaton response");
+                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
+                    *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
                 // TODO state to finish?
@@ -270,6 +305,7 @@ int fidossl_server_parse_cb(
                 break;
             default:
                 debug_printf(DEBUG_LEVEL_ERROR, "Invalid state");
+                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
         }

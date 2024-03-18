@@ -680,7 +680,7 @@ int create_reg_response(struct fido_data *data, SSL *ssl, const u8 **out,
 
     // Run the CTAP
     if (run_ctap(data, REGISTER) != 0) {
-        debug_printf(DEBUG_LEVEL_ERROR, "Failed to run CTAP");
+        debug_printf(DEBUG_LEVEL_VERBOSE, "Failed to run CTAP");
         return -1;
     }
 
@@ -735,7 +735,7 @@ int create_auth_response(struct fido_data *data, SSL *ssl, const u8 **out,
 
     // Run the CTAP
     if (run_ctap(data, AUTHENTICATE) != 0) {
-        debug_printf(DEBUG_LEVEL_ERROR, "Failed to run CTAP");
+        debug_printf(DEBUG_LEVEL_VERBOSE, "Failed to run CTAP");
         return -1;
     }
 
