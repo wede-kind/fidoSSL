@@ -584,7 +584,7 @@ int create_pre_reg_request(struct rp_data *data, const u8 **out,
     packet.gcm_key = data->gcm_key;
     packet.gcm_key_len = data->gcm_key_len;
 
-    return build(&packet, FIDO_PRE_REG_REQUEST, out, out_len);
+    return cbor_build(&packet, FIDO_PRE_REG_REQUEST, out, out_len);
 }
 
 int create_reg_request(struct rp_data *data, const u8 **out,
@@ -683,7 +683,7 @@ int create_reg_request(struct rp_data *data, const u8 **out,
     }
 
     // Encode the packet to CBOR
-    if (build(&packet, FIDO_REG_REQUEST, out, out_len) != 0) {
+    if (cbor_build(&packet, FIDO_REG_REQUEST, out, out_len) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to build registration request");
         return -1;
     }
@@ -721,7 +721,7 @@ int create_auth_request(struct rp_data *data, const u8 **out,
     if (data->user_verification != 0) {
         packet.user_verification = data->user_verification;
     }
-    return build(&packet, FIDO_AUTH_REQUEST, out, out_len);
+    return cbor_build(&packet, FIDO_AUTH_REQUEST, out, out_len);
 }
 
 int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
@@ -730,7 +730,7 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
     }
     enum packet_type type = UNDEFINED;
     struct reg_indication packet;
-    if (parse(in, in_len, &type, &packet) != 0) {
+    if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse indication");
         return -1;
     }
@@ -781,7 +781,7 @@ int process_pre_reg_response(const u8 *in, size_t in_len,
     struct pre_reg_response packet;
     memset(&packet, 0, sizeof(packet));
     enum packet_type type = FIDO_PRE_REG_RESPONSE;
-    if (parse(in, in_len, &type, &packet) != 0) {
+    if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse pre-registration request");
         return -1;
@@ -810,7 +810,7 @@ int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     struct reg_response packet;
     memset(&packet, 0, sizeof(packet));
     enum packet_type type = FIDO_REG_RESPONSE;
-    if (parse(in, in_len, &type, &packet) != 0) {
+    if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse registration response");
         return -1;
@@ -885,7 +885,7 @@ int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) {
     struct auth_response packet;
     memset(&packet, 0, sizeof(packet));
     enum packet_type type = FIDO_AUTH_RESPONSE;
-    if (parse(in, in_len, &type, &packet) != 0) {
+    if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse authentication response");
         return -1;
