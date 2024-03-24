@@ -2,7 +2,7 @@
 
 
 
-**fidoSSL** is a proof of concept implementation of a TLS1.3 extension that integrates [FIDO](https://fidoalliance.org/what-is-fido/) authentication with [openSSL](https://www.openssl.org/). This extension leverages the secure, hardware-based storage of  cryptographic keys through FIDO, offering a robust alternative to  traditional client certificates. Beyond its security advantages, FIDO authentication stands out for its user-friendly and easier-to-manage nature, significantly improving the user experience. Additionally, its phishing-resistant features make it a safer choice, reducing the risk of security breaches.
+**fidoSSL** is a proof of concept implementation of a TLS1.3 extension that integrates [FIDO](https://fidoalliance.org/what-is-fido/) authentication with [openSSL](https://www.openssl.org/). This extension leverages the secure, hardware-based storage of cryptographic keys through FIDO, offering a robust alternative to traditional client certificates. Beyond its security advantages, FIDO authentication stands out for its user-friendly and easier-to-manage nature, significantly improving the user experience. Additionally, its phishing-resistant features make it a safer choice, reducing the risk of security breaches.
 
 This project serves as a foundational draft for further studies and development in the realm of secure communications.
 
@@ -10,7 +10,7 @@ This project serves as a foundational draft for further studies and development 
 
 - Implements FIDO2 authentication within the TLS protocol
 - Uses the TLS1.3 extension mechanism ([RFC 8446](https://datatracker.ietf.org/doc/html/rfc8446#section-4.2))
-- fidoSSL is compiled as C-library, facilitating its addition to  projects as OpenSSL callbacks. This design allows the use of a custom  extension without the need for modifying or patching the OpenSSL source code. However, it necessitates adaptations within the application's source code to integrate the FIDO-based authentication capabilities effectively.
+- fidoSSL is compiled as C-library, facilitating its addition to projects as OpenSSL callbacks. This design allows the use of a custom extension without the need for modifying or patching the OpenSSL source code. However, it necessitates adaptations within the application's source code to integrate the FIDO-based authentication capabilities effectively.
 
 ### Prerequisites
 
@@ -28,6 +28,24 @@ This project serves as a foundational draft for further studies and development 
 This section provides a step-by-step guide to downloading and setting up `fidoSSL` on your system.
 
 #### Dependencies
+
+While Docker and containerization offer numerous benefits for application deployment, including isolation and reproducibility, this project has opted **not to use Docker** for the following reason:
+
+Application build ontop of TLS often dependent on the ability to interact closely with network adapters and hardware. Docker's network abstraction, designed to isolate and secure container environments, can limit direct access to the network hardware. Such limitations can be restrictive for applications that need to manage or modify network traffic or require detailed information about the network's physical layer for optimal operation.
+
+To fulfill the project's requirements for isolation and reproducibility without relying on Docker, a `install-dependencies.sh` script is employed. This script ensures all dependencies are downloaded and built from source, providing maximal compatibility and reproducibility across different systems. Dependencies are **installed locally** within the project's directory, maintaining isolation by avoiding conflicts with system-wide libraries. The make system, with the help of `pkg-config`, link against libraries either installed system-wide or locally within the project directory. This means if you already have certain dependencies installed globally, there is no need to install them again locally.
+
+##### Option 1: Local installation with script:
+
+```sh
+# Install all dependencies
+./install-dependencies.sh all
+
+# Install a subset of dependencies 
+./install-dependencies.sh openssl libfido2 tinycbor sqlite3 jansson
+```
+
+##### Option 2: System wide installation with packet manager:
 
 ###### macOS
 
@@ -50,25 +68,18 @@ On Ubuntu, dependencies can be installed with [aptitude](https://wiki.ubuntuuser
 sudo apt update
 
 # Install dependencies
-sudo apt install build-essential libssl-dev libfido2-dev libsqlite3-dev  libjansson-dev
+sudo apt install build-essential libssl-dev libfido2-dev libsqlite3-dev libjansson-dev
 ```
 
-#### Building the Shared Library
+#### Building the Static Library
 
-1. **Clone the Repository**: Start by cloning the `fidoSSL` repository to your local machine
-
-   ```bash
-   git clone https://github.com/tummetott/fidoSSL.git
-   ```
-
-2. **Build the Library**: Navigate into the cloned repository directory and build the shared library
+1. **Build the Library**: Navigate into the cloned repository directory and build the `libfidossl.a` static library
 
    ```bash
-   cd fidoSSL
    make
    ```
 
-3. **Installation** (Optional): After building, you have the option to install the library and header files to standard system locations, simplifying the process of linking against `fidoSSL` for future projects. This step is not mandatory; you can also choose to link against the library manually by specifying its path.
+2. **Installation (Optional)**: After building, you have the option to install the library and header files to standard system locations, simplifying the process of linking against `fidoSSL` for future projects. This step is not mandatory; you can also choose to link against the library manually by specifying its path.
    To install `fidoSSL` to the default locations (`/usr/local/lib` for libraries and `/usr/local/include` for headers)
 
    ```bash
@@ -76,33 +87,37 @@ sudo apt install build-essential libssl-dev libfido2-dev libsqlite3-dev  libjans
    ```
 
 
-**Note on Manual Linking**: If you prefer not to install `fidoSSL` globally or need to use it in a specific project without affecting the system-wide configuration, you can directly reference the library and header files in your compilation command. The compiled library can be found under `fidoSSL/build/libfidossl.a`.
+
+**Note on Manual Linking**: If you prefer not to install `fidoSSL` globally or need to use it in a specific project without affecting the system-wide configuration, you can directly reference the library and header files in your compilation command. The compiled library can be found under `fidoSSL/build/libfidossl.a` and the pkg-config file can be found under `fidoSSL/build/fidossl.pc`.
 
 #### Compiling Your Application with fidoSSL
 
-When compiling an application that uses `fidoSSL`, include the path to the library's headers and link against the library. If `fidoSSL` was installed in the standard locations, you might compile your application as follows:
+If `fidoSSL` was installed with `sudo make install` and **all dependencies are installed system wide in standart locations**, adjust the makefile of your application as following:
 
 ```bash
-gcc -o myapp myapp.c -lfidossl -lssl -lcrypto -lfido2 -ltinycbor -ljansson
+# Using pkg-config
+CFLAGS += $(shell pkg-config --cflags fidossl)
+LIBS += $(shell pkg-config --libs fidossl)
+
+# Without pkg-config
+CFLAGS+= -I/path/to/fidossl/headers 
+LIBS += -L/path/to/fidossl/library -lfidossl -lssl -lcrypto -lfido2 -ltinycbor -ljansson
 ```
 
 Replace `myapp.c` with your source file's name and `myapp` with your desired executable name. Adjust compiler flags according to your project needs.
 
-For manual linking or if `fidoSSL` and its dependencies are in non-standard locations, specify the paths explicitly:
+If the **dependencies are in non-standard locations**, you can use the `PKG_CONFIG_PATH` environment variable to point to the location of the `.pc` file.
 
 ```bash
-gcc -o myapp myapp.c -I/path/to/fidossl/headers -L/path/to/fidossl/library -lfidossl -lssl -lcrypto -lfido2 -ltinycbor -ljansson
+CFLAGS += $(shell PKG_CONFIG_PATH=~/path/to/pkgconfig/dir pkg-config --cflags fidossl)
+LIBS += $(shell PKG_CONFIG_PATH=~/path/to/pkgconfig/dir pkg-config --libs fidossl)
 ```
-
-- Use `-I/path/to/fidossl/headers` to include the directory containing `fidoSSL`'s header files.
-- Use `-L/path/to/fidossl/library` to add the directory containing the `fidoSSL` library file to the linker's search paths.
-- Ensure these paths point to where `fidoSSL`'s library and headers reside on your filesystem.
 
 ### Usage
 
 This section outlines the steps required to seamlessly incorporate `fidoSSL` into your project. Ensure you've met all [Prerequisites](#Prerequisites), including a basic understanding of OpenSSL in C, before proceeding.
 
-The following comprehensive example demonstrates how to integrate the FIDO authentication extension within a client and server application, utilizing  OpenSSL for the setup. 
+The following comprehensive example demonstrates how to integrate the FIDO authentication extension within a client and server application, utilizing OpenSSL for the setup. 
 
 **Please note**: This example specifically focuses on illustrating how to add `fidoSSL` to your application. It intentionally skips intermediate steps related to general OpenSSL setup and usage, which should be implemented as per OpenSSL's documentation and best practices.
 
@@ -111,7 +126,7 @@ The following comprehensive example demonstrates how to integrate the FIDO authe
 ```c
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <fidossl.h>
+#include <fidossl/fidossl.h>
 
 // Initialize your SSL context (ctx) as per your application's requirements
 SSL_CTX *ctx;
@@ -201,7 +216,7 @@ free(opts);
 ```c
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-#include <fidossl.h>
+#include <fidossl/fidossl.h>
 
 // Initialize your SSL context (ctx) as per your application's requirements
 SSL_CTX *ctx;
@@ -267,6 +282,15 @@ SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, no_ve
 // the extension keeps no references, all data is copied.
 free(opts);
 ```
+
+### Testing `fidossl`
+
+To test the fidossl integration, utilize the simple test `server` and `client` located within the `fidoSSL/build` directory.
+
+1. Start the test server by executing `./server` in the terminal.
+2. In a new terminal window or tab, launch the test client by running `./client`. 
+
+This initiates a TLS handshake with the test server using the fidossl extension, both running on localhost.
 
 ### Disclaimer
 
