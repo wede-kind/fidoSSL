@@ -3,35 +3,37 @@ CC = cc
 # Detect operating system
 UNAME_S := $(shell uname -s)
 
-# Specify compile flags, library paths and libraries to link against for the
-# fido extension (which will be a static library on its own).
-PROJECT_CFLAGS = -I./libs/tinycbor/src -g -Wall
+# Using pkg-config to set flags for dependencies
+PKG_CONFIG_DEPS = libssl libfido2 tinycbor jansson sqlite3
+
+# Define required versions for dependencies
+LIBFIDO2_REQUIRED_VERSION := 1.14.0
+OPENSSL_REQUIRED_VERSION := 3.2.1
+JANSSON_REQUIRED_VERSION := 2.14
+SQLITE_REQUIRED_VERSION := 3.39.5
+TINYCBOR_REQUIRED_VERSION := 0.6.0
+
+# Define PKG_CONFIG_PATH
+CUSTOM_PKG_CONFIG_PATH := $(shell pwd)/pkgconfig
+
+PKG_CONFIG := PKG_CONFIG_PATH=$(CUSTOM_PKG_CONFIG_PATH) pkg-config
+
+# Retrieve flags for compiling and linking
+CFLAGS = $(shell $(PKG_CONFIG) --cflags $(PKG_CONFIG_DEPS)) -I./src -g -Wall
+
+# Use pkg-config to get linker flags
+LIBS = $(shell $(PKG_CONFIG) --libs $(PKG_CONFIG_DEPS))
+
+# Generate -rpath flags based on library paths from pkg-config and remove
+# duplicates
+RPATH_FLAGS = $(shell $(PKG_CONFIG) --libs-only-L $(PKG_CONFIG_DEPS) \
+			  | sed 's/-L/-Wl,-rpath,/g' | tr ' ' '\n' | sort -u | tr '\n' ' ')
+
+LDFLAGS = $(LIBS) $(RPATH_FLAGS)
 
 PROJECT_SRC = $(wildcard src/*.c)
 PROJECT_OBJ = $(patsubst src/%.c, build/obj/%.o, $(PROJECT_SRC))
 PROJECT_TARGET = build/libfidossl.a
-
-# Specify compile flags, library paths and libraries to link against for the
-# test prorgams (client and server).
-TEST_CFLAGS = -I./libs/tinycbor/src -I./src -g -Wall
-TEST_LDFLAGS = -L./build -L./libs/tinycbor/lib
-TEST_LDLIBS = -lfidossl -lcrypto -lssl -lfido2 -ltinycbor -ljansson -lsqlite3
-
-ifeq ($(UNAME_S),Linux)
-	ifneq ($(wildcard /usr/lib/aarch64-linux-gnu/*),)
-		TEST_LDFLAGS += -L/usr/lib/aarch64-linux-gnu
-		TEST_CFLAGS += -I/usr/include
-		PROJECT_CFLAGS += -I/usr/include
-	endif
-endif
-
-ifeq ($(UNAME_S),Darwin)
-	ifneq ($(wildcard /opt/homebrew/include/*),)
-		TEST_LDFLAGS += -L/opt/homebrew/lib
-		PROJECT_CFLAGS += -I/opt/homebrew/include
-		TEST_CFLAGS += -I/opt/homebrew/include
-	endif
-endif
 
 TEST_CLIENT_SRC = test/client.c
 TEST_SERVER_SRC = test/server.c
@@ -51,31 +53,23 @@ INCLUDEDIR = $(PREFIX)/include
 # Define the header files to install
 HEADERS = $(wildcard src/*.h)
 
-all: tinycbor $(PROJECT_TARGET) $(TEST_CLIENT_TARGET) $(TEST_SERVER_TARGET) $(TEST_UNIT_TARGET)
-
-tinycbor:
-	@$(MAKE) -s -C libs/tinycbor
-
-libfido2:
-	cd ./libs/libfido2/ && \
-	cmake -B build && \
-	make -C build
+all: check-versions $(PROJECT_TARGET) $(TEST_CLIENT_TARGET) $(TEST_SERVER_TARGET) $(TEST_UNIT_TARGET)
 
 $(PROJECT_OBJ): build/obj/%.o : src/%.c
 	mkdir -p $(dir $@)
-	$(CC) $(PROJECT_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TEST_CLIENT_OBJ): build/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TEST_SERVER_OBJ): build/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(TEST_UNIT_OBJ): build/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 $(PROJECT_TARGET): $(PROJECT_OBJ)
 	mkdir -p $(dir $@)
@@ -83,15 +77,15 @@ $(PROJECT_TARGET): $(PROJECT_OBJ)
 
 $(TEST_CLIENT_TARGET): $(TEST_CLIENT_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_LDFLAGS) -o $@ $(TEST_CLIENT_OBJ) $(TEST_LDLIBS)
+	$(CC) -o $@ $(TEST_CLIENT_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
 
 $(TEST_SERVER_TARGET): $(TEST_SERVER_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_LDFLAGS) -o $@ $(TEST_SERVER_OBJ) $(TEST_LDLIBS)
+	$(CC) -o $@ $(TEST_SERVER_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
 
 $(TEST_UNIT_TARGET): $(TEST_UNIT_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) $(TEST_LDFLAGS) -o $@ $(TEST_UNIT_OBJ) $(TEST_LDLIBS)
+	$(CC) -o $@ $(TEST_UNIT_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
 
 clean:
 	rm -rf build
@@ -108,4 +102,16 @@ uninstall:
 	rm -f $(LIBDIR)/$(notdir $(PROJECT_TARGET))
 	rm -rf $(INCLUDEDIR)/fidossl
 
-.PHONY: all tinycbor libfido2 clean
+check-versions:
+	@$(PKG_CONFIG) --atleast-version=$(LIBFIDO2_REQUIRED_VERSION) libfido2 || \
+		(echo "libfido2 $(LIBFIDO2_REQUIRED_VERSION) or higher is required" && false)
+	@$(PKG_CONFIG) --atleast-version=$(OPENSSL_REQUIRED_VERSION) openssl || \
+		(echo "OpenSSL $(OPENSSL_REQUIRED_VERSION) or higher is required" && false)
+	@$(PKG_CONFIG) --atleast-version=$(JANSSON_REQUIRED_VERSION) jansson || \
+		(echo "Jansson $(JANSSON_REQUIRED_VERSION) or higher is required" && false)
+	@$(PKG_CONFIG) --atleast-version=$(SQLITE_REQUIRED_VERSION) sqlite3 || \
+		(echo "SQLite $(SQLITE_REQUIRED_VERSION) or higher is required" && false)
+	@$(PKG_CONFIG) --atleast-version=$(TINYCBOR_REQUIRED_VERSION) tinycbor || \
+		(echo "TinyCBOR $(TINYCBOR_REQUIRED_VERSION) or higher is required" && false)
+
+.PHONY: all clean

@@ -55,6 +55,7 @@ dkms.conf
 .DS_Store
 
 build
+libs
 fido2.db
 .cache
 compile_commands.json
