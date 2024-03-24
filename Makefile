@@ -77,15 +77,15 @@ $(PROJECT_TARGET): $(PROJECT_OBJ)
 
 $(TEST_CLIENT_TARGET): $(TEST_CLIENT_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(TEST_CLIENT_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
+	$(CC) -o $@ $(TEST_CLIENT_OBJ) $(PROJECT_TARGET) $(LDFLAGS)
 
 $(TEST_SERVER_TARGET): $(TEST_SERVER_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(TEST_SERVER_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
+	$(CC) -o $@ $(TEST_SERVER_OBJ) $(PROJECT_TARGET) $(LDFLAGS)
 
 $(TEST_UNIT_TARGET): $(TEST_UNIT_OBJ) $(PROJECT_TARGET)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(TEST_UNIT_OBJ) $(LDFLAGS) $(PROJECT_TARGET)
+	$(CC) -o $@ $(TEST_UNIT_OBJ) $(PROJECT_TARGET) $(LDFLAGS)
 
 clean:
 	rm -rf build
@@ -105,7 +105,7 @@ uninstall:
 check-versions:
 	@$(PKG_CONFIG) --atleast-version=$(LIBFIDO2_REQUIRED_VERSION) libfido2 || \
 		(echo "libfido2 $(LIBFIDO2_REQUIRED_VERSION) or higher is required" && false)
-	@$(PKG_CONFIG) --atleast-version=$(OPENSSL_REQUIRED_VERSION) openssl || \
+	@$(PKG_CONFIG) --atleast-version=$(OPENSSL_REQUIRED_VERSION) libssl || \
 		(echo "OpenSSL $(OPENSSL_REQUIRED_VERSION) or higher is required" && false)
 	@$(PKG_CONFIG) --atleast-version=$(JANSSON_REQUIRED_VERSION) jansson || \
 		(echo "Jansson $(JANSSON_REQUIRED_VERSION) or higher is required" && false)
