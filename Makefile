@@ -91,7 +91,6 @@ clean:
 	rm -rf $(BUILDDIR)
 
 pkgconfig:
-	@echo "Generating $(NAME).pc file..."
 	@echo "prefix=$(PREFIX)" > $(BUILDDIR)/$(NAME).pc
 	@echo "exec_prefix=\$${prefix}" >> $(BUILDDIR)/$(NAME).pc
 	@echo "libdir=$(LIBDIR)" >> $(BUILDDIR)/$(NAME).pc
