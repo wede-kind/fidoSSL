@@ -108,10 +108,11 @@ pkgconfig:
 install: $(PROJECT_TARGET)
 	@echo "Installing library..."
 	mkdir -p $(LIBDIR)
+	mkdir -p $(LIBDIR)/pkgconfig
 	mkdir -p $(INCLUDEDIR)/fidossl
 	cp $(PROJECT_TARGET) $(LIBDIR)
 	cp $(HEADERS) $(INCLUDEDIR)/fidossl
-	cp $(BUILDDIR)/$(NAME).pc $(LIBDIR)/pkgconfig
+	cp $(BUILDDIR)/$(NAME).pc $(LIBDIR)/pkgconfig/$(NAME).pc
 
 # Add an uninstall target for cleanup
 uninstall:
