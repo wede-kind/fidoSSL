@@ -8,9 +8,9 @@ This project serves as a foundational draft for further studies and development 
 
 ### Features
 
-- Implements FIDO authentication within the TLS protocol
+- Implements FIDO2 authentication within the TLS protocol
 - Uses the TLS1.3 extension mechanism ([RFC 8446](https://datatracker.ietf.org/doc/html/rfc8446#section-4.2))
-- fidoSSL is crafted as a shared library, facilitating its addition to  projects as OpenSSL callbacks. This design allows the use of a custom  extension without the need for modifying or patching the OpenSSL source code. However, it necessitates adaptations within the application's source code to integrate the FIDO-based authentication capabilities effectively.
+- fidoSSL is compiled as C-library, facilitating its addition to  projects as OpenSSL callbacks. This design allows the use of a custom  extension without the need for modifying or patching the OpenSSL source code. However, it necessitates adaptations within the application's source code to integrate the FIDO-based authentication capabilities effectively.
 
 ### Prerequisites
 
