@@ -1,6 +1,11 @@
+NAME = fidossl
+VERSION = 1.0
+DESCRIPTION = "FIDO2 extensions for OpenSSL"
+PREFIX = /usr/local
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include
+BUILDDIR = ./build
 CC = cc
-
-# Detect operating system
 UNAME_S := $(shell uname -s)
 
 # Using pkg-config to set flags for dependencies
@@ -14,9 +19,9 @@ SQLITE_REQUIRED_VERSION := 3.37.0
 TINYCBOR_REQUIRED_VERSION := 0.6.0
 
 # Define PKG_CONFIG_PATH
-CUSTOM_PKG_CONFIG_PATH := $(shell pwd)/libs/pkgconfig
+LOCAL_PKG_CONFIG_PATH := $(shell pwd)/libs/pkgconfig
 
-PKG_CONFIG := PKG_CONFIG_PATH=$(CUSTOM_PKG_CONFIG_PATH) pkg-config
+PKG_CONFIG := PKG_CONFIG_PATH=$(LOCAL_PKG_CONFIG_PATH) pkg-config
 
 # Retrieve flags for compiling and linking
 CFLAGS = $(shell $(PKG_CONFIG) --cflags $(PKG_CONFIG_DEPS)) -I./src -g -Wall
@@ -32,42 +37,37 @@ RPATH_FLAGS = $(shell $(PKG_CONFIG) --libs-only-L $(PKG_CONFIG_DEPS) \
 LDFLAGS = $(LIBS) $(RPATH_FLAGS)
 
 PROJECT_SRC = $(wildcard src/*.c)
-PROJECT_OBJ = $(patsubst src/%.c, build/obj/%.o, $(PROJECT_SRC))
-PROJECT_TARGET = build/libfidossl.a
+PROJECT_OBJ = $(patsubst src/%.c, $(BUILDDIR)/obj/%.o, $(PROJECT_SRC))
+PROJECT_TARGET = $(BUILDDIR)/libfidossl.a
 
 TEST_CLIENT_SRC = test/client.c
 TEST_SERVER_SRC = test/server.c
 TEST_UNIT_SRC = test/unit_tests.c
-TEST_CLIENT_OBJ = $(patsubst test/%.c, build/obj/%.o, $(TEST_CLIENT_SRC))
-TEST_SERVER_OBJ = $(patsubst test/%.c, build/obj/%.o, $(TEST_SERVER_SRC))
-TEST_UNIT_OBJ = $(patsubst test/%.c, build/obj/%.o, $(TEST_UNIT_SRC))
-TEST_CLIENT_TARGET = build/client
-TEST_SERVER_TARGET = build/server
-TEST_UNIT_TARGET = build/unit_tests
-
-# Add installation paths
-PREFIX = /usr/local
-LIBDIR = $(PREFIX)/lib
-INCLUDEDIR = $(PREFIX)/include
+TEST_CLIENT_OBJ = $(patsubst test/%.c, $(BUILDDIR)/obj/%.o, $(TEST_CLIENT_SRC))
+TEST_SERVER_OBJ = $(patsubst test/%.c, $(BUILDDIR)/obj/%.o, $(TEST_SERVER_SRC))
+TEST_UNIT_OBJ = $(patsubst test/%.c, $(BUILDDIR)/obj/%.o, $(TEST_UNIT_SRC))
+TEST_CLIENT_TARGET = $(BUILDDIR)/client
+TEST_SERVER_TARGET = $(BUILDDIR)/server
+TEST_UNIT_TARGET = $(BUILDDIR)/unit_tests
 
 # Define the header files to install
 HEADERS = $(wildcard src/*.h)
 
-all: check-versions $(PROJECT_TARGET) $(TEST_CLIENT_TARGET) $(TEST_SERVER_TARGET) $(TEST_UNIT_TARGET)
+all: check-versions $(PROJECT_TARGET) $(TEST_CLIENT_TARGET) $(TEST_SERVER_TARGET) $(TEST_UNIT_TARGET) pkgconfig
 
-$(PROJECT_OBJ): build/obj/%.o : src/%.c
+$(PROJECT_OBJ): $(BUILDDIR)/obj/%.o : src/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TEST_CLIENT_OBJ): build/obj/%.o : test/%.c
+$(TEST_CLIENT_OBJ): $(BUILDDIR)/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TEST_SERVER_OBJ): build/obj/%.o : test/%.c
+$(TEST_SERVER_OBJ): $(BUILDDIR)/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(TEST_UNIT_OBJ): build/obj/%.o : test/%.c
+$(TEST_UNIT_OBJ): $(BUILDDIR)/obj/%.o : test/%.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -88,14 +88,30 @@ $(TEST_UNIT_TARGET): $(TEST_UNIT_OBJ) $(PROJECT_TARGET)
 	$(CC) -o $@ $(TEST_UNIT_OBJ) $(PROJECT_TARGET) $(LDFLAGS)
 
 clean:
-	rm -rf build
+	rm -rf $(BUILDDIR)
+
+pkgconfig:
+	@echo "Generating $(NAME).pc file..."
+	@echo "prefix=$(PREFIX)" > $(BUILDDIR)/$(NAME).pc
+	@echo "exec_prefix=\$${prefix}" >> $(BUILDDIR)/$(NAME).pc
+	@echo "libdir=$(LIBDIR)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "includedir=$(INCLUDEDIR)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Name: $(NAME)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Description: $(DESCRIPTION)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Version: $(VERSION)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Libs: -L\$${libdir} -l$(NAME)" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Cflags: -I\$${includedir}" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Requires: libssl libfido2 tinycbor jansson sqlite3" >> $(BUILDDIR)/$(NAME).pc
 
 # Add an install target
 install: $(PROJECT_TARGET)
+	@echo "Installing library..."
 	mkdir -p $(LIBDIR)
 	mkdir -p $(INCLUDEDIR)/fidossl
 	cp $(PROJECT_TARGET) $(LIBDIR)
 	cp $(HEADERS) $(INCLUDEDIR)/fidossl
+	cp $(BUILDDIR)/$(NAME).pc $(LIBDIR)/pkgconfig
 
 # Add an uninstall target for cleanup
 uninstall:
