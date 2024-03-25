@@ -104,8 +104,6 @@ CFLAGS+= -I/path/to/fidossl/headers
 LIBS += -L/path/to/fidossl/library -lfidossl -lssl -lcrypto -lfido2 -ltinycbor -ljansson
 ```
 
-Replace `myapp.c` with your source file's name and `myapp` with your desired executable name. Adjust compiler flags according to your project needs.
-
 If the **dependencies are in non-standard locations**, you can use the `PKG_CONFIG_PATH` environment variable to point to the location of the `.pc` file.
 
 ```bash
