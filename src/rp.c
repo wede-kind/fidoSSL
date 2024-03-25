@@ -93,7 +93,7 @@ struct rp_data *init_rp(SSL *ssl, void *server_opts) {
         data->auth_attach = opts->auth_attach;
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                      "    Authenticator attachment: %s",
-                     get_action_policy_name(opts->auth_attach));
+                     0 ? "PLATFORM" : "CROSS_PLATFORM");
     }
     if (opts->transport != 0 && opts->transport != USB) {
         debug_printf(DEBUG_LEVEL_ERROR, "Only USB transport is supported");
