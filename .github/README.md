@@ -129,16 +129,9 @@ The following comprehensive example demonstrates how to integrate the FIDO authe
 // Initialize your SSL context (ctx) as per your application's requirements
 SSL_CTX *ctx;
 
-// Set the minimum protocol version to TLS 1.3
-if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
-    // Handle error
-}
-
-// Load the client certificate and private key
-if (SSL_CTX_use_certificate_file(ctx, "/path/to/client.crt", SSL_FILETYPE_PEM) <= 0 ||
-    SSL_CTX_use_PrivateKey_file(ctx, "/path/to/client.key", SSL_FILETYPE_PEM) <= 0) {
-    // Handle error
-}
+// The init function enforces TLS 1.3 and loads a dummy certificate + key
+// for the client, which is not verified
+fidossl_init_client_ctx(ctx);
 
 // Prepare FIDOSSL client options
 FIDOSSL_CLIENT_OPTS *opts = malloc(sizeof(FIDOSSL_CLIENT_OPTS));

@@ -60,11 +60,11 @@ int main() {
     // FIDOSSL START
 
     // The init function enforces TLS 1.3 and loads a dummy certificate + key
-    // for the client, which is not evaluated
+    // for the client, which is not verified
     fidossl_init_client_ctx(ctx);
 
     FIDOSSL_CLIENT_OPTS *opts = malloc(sizeof(FIDOSSL_CLIENT_OPTS));
-    // Either FIDOSSL_REGISTER or FIDOSSL_AUTH
+    // Either FIDOSSL_REGISTER or FIDOSSL_AUTHENTICATE
     opts->mode = FIDOSSL_REGISTER;
     opts->user_name = "alice";
     opts->user_display_name = "Alice";
