@@ -46,7 +46,7 @@ int main() {
     ctx = SSL_CTX_new(TLS_client_method());
 
     // Tell the client which CA should be trusted for server certificate verification
-    if (!SSL_CTX_load_verify_locations(ctx, "/opt/homebrew/etc/pki/ca.crt", NULL)) {
+    if (!SSL_CTX_load_verify_locations(ctx, "./test/certs/ca.crt", NULL)) {
         printf("Failed to load CA certificate\n");
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
@@ -59,26 +59,13 @@ int main() {
     //-------------------------------------------------------------------------
     // FIDOSSL START
 
-    // Enforce TLS 1.3
-    if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
-        printf("Failed to set the minimum TLS protocol version\n");
-    }
-
-    // Since the extension enforces client certificates, we need to provide a
-    // client certificate and a private key
-    if (SSL_CTX_use_certificate_file(ctx, "/opt/homebrew/etc/pki/issued/Alice.crt", SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        exit(EXIT_FAILURE);
-    }
-    if (SSL_CTX_use_PrivateKey_file(ctx, "/opt/homebrew/etc/pki/private/Alice.key", SSL_FILETYPE_PEM) <= 0) {
-        ERR_print_errors_fp(stderr);
-        SSL_CTX_free(ctx);
-        exit(EXIT_FAILURE);
-    }
+    // The init function enforces TLS 1.3 and loads a dummy certificate + key
+    // for the client, which is not evaluated
+    fidossl_init_client_ctx(ctx);
 
     FIDOSSL_CLIENT_OPTS *opts = malloc(sizeof(FIDOSSL_CLIENT_OPTS));
-    opts->mode = FIDOSSL_AUTHENTICATE;
+    // Either FIDOSSL_REGISTER or FIDOSSL_AUTH
+    opts->mode = FIDOSSL_REGISTER;
     opts->user_name = "alice";
     opts->user_display_name = "Alice";
     opts->ticket_b64 = "y1v2BsTzi6baajWpU5WSDw6AYorx2MSDO1iVFSQC8VQ=";

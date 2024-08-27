@@ -325,3 +325,63 @@ int no_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     // but fido authentication replaces the client certificate authentication.
     return 1;
 }
+
+void fidossl_init_client_ctx(SSL_CTX *ctx) {
+
+    // Enforce TLS 1.3
+    if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {
+        printf("Failed to set the minimum TLS protocol version\n");
+    }
+
+    // Create a BIO with the PEM certificate string
+    BIO *cert_bio = BIO_new_mem_buf(FIDOSSL_CLIENT_CRT, -1);
+    if (!cert_bio) {
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+
+    // Load the certificate from the BIO
+    X509 *cert = PEM_read_bio_X509(cert_bio, NULL, NULL, NULL);
+    BIO_free(cert_bio);
+    if (!cert) {
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+
+    // Use the certificate in the SSL_CTX
+    if (SSL_CTX_use_certificate(ctx, cert) <= 0) {
+        ERR_print_errors_fp(stderr);
+        X509_free(cert);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+    X509_free(cert);
+
+    // Create a BIO with the PEM private key string
+    BIO *key_bio = BIO_new_mem_buf(FIDOSSL_CLIENT_KEY, -1);
+    if (!key_bio) {
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+
+    // Load the private key from the BIO
+    EVP_PKEY *pkey = PEM_read_bio_PrivateKey(key_bio, NULL, NULL, NULL);
+    BIO_free(key_bio);
+    if (!pkey) {
+        ERR_print_errors_fp(stderr);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+
+    // Use the private key in the SSL_CTX
+    if (SSL_CTX_use_PrivateKey(ctx, pkey) <= 0) {
+        ERR_print_errors_fp(stderr);
+        EVP_PKEY_free(pkey);
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
+    EVP_PKEY_free(pkey);
+}

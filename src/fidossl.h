@@ -12,6 +12,22 @@
 // - SSL_EXT_TLS1_3_CERTIFICATE_REQUEST
 #define FIDOSSL_CONTEXT 0x5080
 
+// A dummy key which is not validated
+#define FIDOSSL_CLIENT_KEY \
+"-----BEGIN PRIVATE KEY-----\n" \
+"MC4CAQAwBQYDK2VwBCIEIP+++++++++++///FIDO2+TLS+Extension///++++++\n" \
+"-----END PRIVATE KEY-----\n"
+
+// A dummy certificate which uses the dummy key
+#define FIDOSSL_CLIENT_CRT \
+"-----BEGIN CERTIFICATE-----\n" \
+"MIHjMIGWAgEAMAUGAytlcDAeMRwwGgYDVQQDDBNGSURPMiBUTFMgRVhURU5TSU9O\n" \
+"MB4XDTI0MDgyNzE0Mjg0OFoXDTM0MDgyNTE0Mjg0OFowHjEcMBoGA1UEAwwTRklE\n" \
+"TzIgVExTIEVYVEVOU0lPTjAqMAUGAytlcAMhAAbz7p98S0c2oGUEDfT435miLn6u\n" \
+"kXv3GZUzqDLXq357MAUGAytlcANBAKkd4iy1S9EdVlzlt6UQv334Fbk6Gk2LJztR\n" \
+"pTCtt+IY3Ioos4PG8r8KwaFKdLNpf3Mof6EvtZGWa2kmqtLVsAk=\n" \
+"-----END CERTIFICATE-----\n"
+
 typedef struct fidossl_client_opts {
     enum client_mode {
         FIDOSSL_REGISTER,
@@ -59,5 +75,7 @@ void fidossl_server_free_cb(SSL *ssl, unsigned int ext_type, unsigned int contex
                             const unsigned char *out, void *add_arg);
 
 int no_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx);
+
+void fidossl_init_client_ctx(SSL_CTX *ctx);
 
 #endif /* FIDOSSL_H */

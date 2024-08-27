@@ -56,8 +56,8 @@ int main() {
     ctx = SSL_CTX_new(TLS_server_method());
 
     // Load certificate and private key
-    SSL_CTX_use_certificate_file(ctx, "/opt/homebrew/etc/pki/issued/demo.fido2.tls.edu.crt", SSL_FILETYPE_PEM);
-    SSL_CTX_use_PrivateKey_file(ctx, "/opt/homebrew/etc/pki/private/demo.fido2.tls.edu.key", SSL_FILETYPE_PEM);
+    SSL_CTX_use_certificate_file(ctx, "./test/certs/demo.fido2.tls.edu.crt", SSL_FILETYPE_PEM);
+    SSL_CTX_use_PrivateKey_file(ctx, "./test/certs/demo.fido2.tls.edu.key", SSL_FILETYPE_PEM);
     if (!SSL_CTX_check_private_key(ctx)) {
         fprintf(stderr, "Private key does not match the certificate.\n");
         exit(EXIT_FAILURE);
