@@ -4,7 +4,7 @@
 
 **fidoSSL** is a proof of concept implementation of a TLS1.3 extension that integrates [FIDO](https://fidoalliance.org/what-is-fido/) authentication with [openSSL](https://www.openssl.org/). This extension leverages the secure, hardware-based storage of cryptographic keys through FIDO, offering a robust alternative to traditional client certificates. Beyond its security advantages, FIDO authentication stands out for its user-friendly and easier-to-manage nature, significantly improving the user experience. Additionally, its phishing-resistant features make it a safer choice, reducing the risk of security breaches.
 
-This project serves as a foundational draft for further studies and development in the realm of secure communications.
+This project serves as a foundational draft for further studies and development in the realm of secure communications. It was presented as a master’s thesis at Humboldt University of Berlin. The full thesis can be accessed [here](https://sar.informatik.hu-berlin.de/research/publications/index.htm#SAR-PR-2024-02).
 
 ### Features
 
