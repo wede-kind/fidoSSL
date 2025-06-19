@@ -71,7 +71,8 @@ int aes_gcm_encrypt(const u8 *plain, size_t plain_len, u8 **cypher, size_t *cyph
     int ciphertext_len;
     // Hardcoded IV. We must not generate a new one since the GCM key is only
     // used once
-    u8 *iv = (u8 *)"0123456789012345";
+    // Needs to be 12 Bytes long
+    u8 *iv = (u8 *)"012345678901";
     u8 tag[16]; // GCM Tag
 
     // Check for valid key length
@@ -129,7 +130,8 @@ int aes_gcm_decrypt(const u8 *cypher, size_t cypher_len, u8 **plain, size_t *pla
     int len;
     int ret = -1;
     // Assume IV is the same 12 bytes as used in encryption, and tag is appended at the end of cypher
-    u8 *iv = (u8 *)"0123456789012345";
+    // Needs to be 12 Bytes long
+    u8 *iv = (u8 *)"012345678901";
     u8 tag[16];
 
     // Check key length for validity

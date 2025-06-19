@@ -931,3 +931,161 @@ err:
     OPENSSL_free(buf);
     return -1;
 }
+
+/*
+ * Copyright (c) 2020 Pedro Martelletto. All rights reserved.
+ * Use of this source code is governed by a BSD-style
+ * license that can be found in the LICENSE file.
+ * Modified to use tinyCBOR
+ */
+
+static void
+warnx(const char *fmt, const char *arg) {
+    fprintf(stderr, fmt, arg);
+    fprintf(stderr, "\n");
+}
+
+// Helper: encode COSE algorithm (negative int) as per COSE spec
+static CborError
+cbor_encode_cose_alg(CborEncoder *mapEncoder, const char *key, int cose_alg) {
+    CborError err;
+
+    err = cbor_encode_text_stringz(mapEncoder, key);
+    if (err) return err;
+
+    return cbor_encode_int(mapEncoder, cose_alg);
+}
+
+// Helper: encode a bytestring field
+static CborError
+cbor_encode_bytestring(CborEncoder *mapEncoder, const char *key,
+                       const uint8_t *data, size_t len) {
+    CborError err;
+
+    err = cbor_encode_text_stringz(mapEncoder, key);
+    if (err) return err;
+
+    return cbor_encode_byte_string(mapEncoder, data, len);
+}
+
+// Helper: wrap bytestring in single-element array for "x5c"
+static CborError
+cbor_encode_wrap_blob(CborEncoder *mapEncoder, const char *key,
+                      const uint8_t *data, size_t len) {
+    CborError err;
+    CborEncoder arrayEncoder;
+
+    err = cbor_encode_text_stringz(mapEncoder, key);
+    if (err) return err;
+
+    err = cbor_encoder_create_array(mapEncoder, &arrayEncoder, 1);
+    if (err) return err;
+
+    err = cbor_encode_byte_string(&arrayEncoder, data, len);
+    if (err) return err;
+
+    return cbor_encoder_close_container(mapEncoder, &arrayEncoder);
+}
+
+// Encode the attestation statement map
+static CborError
+cbor_encode_attestation_statement(CborEncoder *mapEncoder,
+                                 const fido_cred_t *cred,
+                                 const char *fmt) {
+    CborError err = CborNoError;
+    int type = fido_cred_type(cred);
+    const unsigned char *sig_ptr = fido_cred_sig_ptr(cred);
+    size_t sig_len = fido_cred_sig_len(cred);
+    const unsigned char *x5c_ptr = fido_cred_x5c_ptr(cred);
+    size_t x5c_len = fido_cred_x5c_len(cred);
+
+    if (type != COSE_ES256 || sig_ptr == NULL || sig_len == 0 ||
+        x5c_ptr == NULL || x5c_len == 0) {
+        warnx("cbor_encode_attestation_statement: fido_cred invalid", "");
+        return CborUnknownError;
+    }
+
+    // Create attStmt map with 2 or 3 keys (depending on fmt)
+    int map_size = strcmp(fmt, "packed") == 0 ? 3 : 2;
+
+    CborEncoder attStmtMap;
+    err = cbor_encoder_create_map(mapEncoder, &attStmtMap, map_size);
+    if (err) return err;
+
+    if (map_size == 3) {
+        err = cbor_encode_cose_alg(&attStmtMap, "alg", type);
+        if (err) return err;
+    }
+
+    err = cbor_encode_bytestring(&attStmtMap, "sig", sig_ptr, sig_len);
+    if (err) return err;
+
+    err = cbor_encode_wrap_blob(&attStmtMap, "x5c", x5c_ptr, x5c_len);
+    if (err) return err;
+
+    return cbor_encoder_close_container(mapEncoder, &attStmtMap);
+}
+
+// Main function to build attestation object (CBOR bytes)
+unsigned char *
+cbor_build_attestation_object(const fido_cred_t *cred, size_t *out_len) {
+    if (cred == NULL || out_len == NULL) {
+        return NULL;
+    }
+
+    const char *fmt = fido_cred_fmt(cred);
+    const unsigned char *authdata_ptr = fido_cred_authdata_raw_ptr(cred);
+    size_t authdata_len = fido_cred_authdata_raw_len(cred);
+
+    if (fmt == NULL || authdata_ptr == NULL || authdata_len == 0) {
+        warnx("cbor_build_attestation_object: fido_cred invalid", "");
+        return NULL;
+    }
+
+    // Allocate a buffer for encoding. Adjust size if necessary.
+    size_t buf_size = 4048; // initial guess
+    unsigned char *buf = malloc(buf_size);
+    if (buf == NULL) {
+        return NULL;
+    }
+
+    CborEncoder encoder, attObjMap;
+    CborError err;
+
+    cbor_encoder_init(&encoder, buf, buf_size, 0);
+
+    // Create attestation object map with 3 keys: fmt, attStmt, authData
+    err = cbor_encoder_create_map(&encoder, &attObjMap, 3);
+    if (err) goto fail;
+
+    // fmt : text string
+    err = cbor_encode_text_stringz(&attObjMap, "fmt");
+    if (err) goto fail;
+    err = cbor_encode_text_stringz(&attObjMap, fmt);
+    if (err) goto fail;
+
+    // attStmt : map
+    err = cbor_encode_text_stringz(&attObjMap, "attStmt");
+    if (err) goto fail;
+
+    // Encode attestation statement inline
+    err = cbor_encode_attestation_statement(&attObjMap, cred, fmt);
+    if (err) goto fail;
+
+    // authData : bytestring
+    err = cbor_encode_text_stringz(&attObjMap, "authData");
+    if (err) goto fail;
+    err = cbor_encode_byte_string(&attObjMap, authdata_ptr, authdata_len);
+    if (err) goto fail;
+
+    err = cbor_encoder_close_container(&encoder, &attObjMap);
+    if (err) goto fail;
+
+    *out_len = cbor_encoder_get_buffer_size(&encoder, buf);
+    return buf;
+
+fail:
+    free(buf);
+    warnx("cbor_build_attestation_object: encoding failed", "");
+    return NULL;
+}

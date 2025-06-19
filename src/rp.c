@@ -136,12 +136,87 @@ struct rp_data *get_rp_data(SSL *ssl, void *server_opts) {
     return SSL_CTX_get_ex_data(ctx, ctx_data_index);
 }
 
+// Extract authData from a CBOR-encoded attestation object
+// Returns 0 on success, -1 on failure
+int extract_authdata_from_attobj(const uint8_t *attObjBuf, const size_t attObjLen,
+                                 uint8_t **authDataPtr, size_t *authDataLen) {
+    CborParser parser;
+    CborValue mapIt;
+    CborValue it;
+
+    if (!attObjBuf || !authDataPtr || !authDataLen)
+        return -1;
+
+    CborError err = cbor_parser_init(attObjBuf, attObjLen, 0, &parser, &it);
+    if (err != CborNoError || !cbor_value_is_map(&it)) {
+        fprintf(stderr, "CBOR parse error or not a map\n");
+        return -1;
+    }
+
+    err = cbor_value_enter_container(&it, &mapIt);
+    if (err != CborNoError) {
+        fprintf(stderr, "Failed to enter map: %d\n", err);
+        return -1;
+    }
+
+    // Walk through the map to find "authData"
+    while (!cbor_value_at_end(&mapIt)) {
+        char key[32] = {0};
+        size_t keyLen = sizeof(key) - 1;
+
+        if (!cbor_value_is_text_string(&mapIt)) {
+            fprintf(stderr, "CBOR map key is missing");
+            return -1;
+        }
+
+        err = cbor_value_copy_text_string(&mapIt, key, &keyLen, &mapIt);
+        if (err != CborNoError) {
+            fprintf(stderr, "Could not copy CBOR map key");
+            return -1;
+        }
+
+        // Check key
+        if (strcmp(key, "authData") == 0) {
+            if (!cbor_value_is_byte_string(&mapIt)) {
+                fprintf(stderr, "authData corrupt");
+                return -1;
+            }
+            err = cbor_value_calculate_string_length(&mapIt, authDataLen);
+            if (err != CborNoError) {
+                fprintf(stderr, "cbor_value_calculate_string_length()");
+                return -1;
+            }
+            *authDataPtr = OPENSSL_malloc(*authDataLen);
+            err = cbor_value_copy_byte_string(&mapIt, *authDataPtr, authDataLen, nullptr);
+            if (err != CborNoError) {
+                fprintf(stderr, "cbor_value_copy_byte_string()");
+                return -1;
+            }
+            return 0;
+        } else {
+            // Skip the value if it's not "authData"
+            err = cbor_value_advance(&mapIt);
+            if (err != CborNoError) {
+                fprintf(stderr, "Failed to advance map");
+                return -1;
+            }
+        }
+    }
+
+    return -1;  // authData not found
+}
+
 struct authdata *parse_authdata(const u8 *data, size_t data_len) {
     // Authdata has a fixed structure, so we can parse it without a CBOR
     // library. See: https://www.w3.org/TR/webauthn-2/#authenticator-data
     if (data == NULL || data_len == 0) {
         return NULL;
     }
+
+    uint8_t *authDataBytes = nullptr;
+    size_t authDataBytesLen = 0;
+    extract_authdata_from_attobj(data, data_len, &authDataBytes, &authDataBytesLen);
+
     struct authdata *ad = OPENSSL_malloc(sizeof(struct authdata));
     if (ad == NULL) {
         debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
@@ -156,10 +231,10 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
         free_authdata(ad);
         return NULL;
     }
-    memcpy(ad->rp_id_hash, data + offset, 32);
+    memcpy(ad->rp_id_hash, authDataBytes + offset, 32);
     offset += 32;
     // Flags
-    ad->flags = data[offset];
+    ad->flags = authDataBytes[offset];
     offset += 1;
     // If ED bit is set, authdata contains an extension. For now, we don't
     // support extensions.
@@ -167,8 +242,8 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
         debug_printf(DEBUG_LEVEL_ERROR, "Extensions are not supported");
     }
     // Signature counter
-    ad->sign_count = (data[offset] << 24) | (data[offset + 1] << 16) |
-                     (data[offset + 2] << 8) | data[offset + 3];
+    ad->sign_count = (authDataBytes[offset] << 24) | (authDataBytes[offset + 1] << 16) |
+                     (authDataBytes[offset + 2] << 8) | authDataBytes[offset + 3];
     offset += 4;
     // If the AT bit is set, parse the attestation credential data. The bit is
     // expected to be set for registration, but not for authentication.
@@ -181,10 +256,10 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
             free_authdata(ad);
             return NULL;
         }
-        memcpy(ad->aaguid, data + offset, 16);
+        memcpy(ad->aaguid, authDataBytes + offset, 16);
         offset += 16;
         // 2 bytes for the length of the credential id
-        ad->cred_id_len = (data[offset] << 8) | data[offset + 1];
+        ad->cred_id_len = (authDataBytes[offset] << 8) | authDataBytes[offset + 1];
         offset += 2;
         // Credential ID
         ad->cred_id = OPENSSL_malloc(ad->cred_id_len);
@@ -193,24 +268,24 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
             free_authdata(ad);
             return NULL;
         }
-        memcpy(ad->cred_id, data + offset, ad->cred_id_len);
+        memcpy(ad->cred_id, authDataBytes + offset, ad->cred_id_len);
         offset += ad->cred_id_len;
         // Now at the start of the COSE-encoded public key. We must use a CBOR
         // library to parse the public key. For now we just store it in binary
         // format.
-        ad->pubkey_len = data_len - offset;
+        ad->pubkey_len = authDataBytesLen - offset;
         ad->pubkey = OPENSSL_malloc(ad->pubkey_len);
         if (ad->pubkey == NULL) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
             free_authdata(ad);
-            return NULL;
+            return nullptr;
         }
-        memcpy(ad->pubkey, data + offset, ad->pubkey_len);
+        memcpy(ad->pubkey, authDataBytes + offset, ad->pubkey_len);
         offset += ad->pubkey_len;
     }
     // Since we allow no extensions, we assume that the offset is equal to the
     // length of the authdata.
-    if (offset != data_len) {
+    if (offset != authDataBytesLen) {
         debug_printf(DEBUG_LEVEL_ERROR, "Invalid authdata length");
         free_authdata(ad);
         return NULL;
@@ -580,7 +655,7 @@ int create_pre_reg_request(struct rp_data *data, const u8 **out,
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                  "Created an ephemeral user id from random bytes");
     // Create a 16 byte key which is used to encrypt the user id
-    data->gcm_key_len = 16;
+    data->gcm_key_len = 32;
     if (create_random_bytes(data->gcm_key_len, &data->gcm_key) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to create random bytes");
         return -1;

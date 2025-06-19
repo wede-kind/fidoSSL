@@ -587,12 +587,17 @@ int run_ctap(struct ud_data *data, enum fido_mode mode) {
     }
     // Read the output from ctap and store it in the ud_data struct
     if (success && mode == REGISTER) {
-        data->authdata_len = fido_cred_authdata_raw_len(cred_t);
+        // According to the WebAuthn and your own master thesis the attestation object is required
+        size_t attobj_len;
+        unsigned char *attobj = cbor_build_attestation_object(cred_t, &attobj_len);
+        if (attobj == nullptr) {
+            fprintf(stderr, "Could not build attestation object");
+            return -1;
+        }
+        data->authdata_len = attobj_len;
         data->authdata = OPENSSL_malloc(data->authdata_len);
-        memcpy(data->authdata, fido_cred_authdata_raw_ptr(cred_t),
+        memcpy(data->authdata, attobj,
                data->authdata_len);
-
-        // attStmt and fmt is omitted here because attestation is not supported
 
     } else if (success && mode == AUTHENTICATE) {
         data->authdata_len = fido_assert_authdata_raw_len(assert_t, 0);
