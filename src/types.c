@@ -62,23 +62,13 @@ void free_auth_response(struct auth_response *auth_response) {
     OPENSSL_free(auth_response);
 }
 
-void free_pre_reg_request(struct pre_reg_request *pre_reg_request) {
-    if (pre_reg_request == NULL) {
+void free_pre_request(struct pre_request *pre_request) {
+    if (pre_request == NULL) {
         return;
     }
-    OPENSSL_free(pre_reg_request->eph_user_id);
-    OPENSSL_free(pre_reg_request->gcm_key);
-    OPENSSL_free(pre_reg_request);
-}
-
-void free_pre_reg_response(struct pre_reg_response *pre_reg_response) {
-    if (pre_reg_response == NULL) {
-        return;
-    }
-    OPENSSL_free(pre_reg_response->user_name);
-    OPENSSL_free(pre_reg_response->user_display_name);
-    OPENSSL_free(pre_reg_response->ticket);
-    OPENSSL_free(pre_reg_response);
+    OPENSSL_free(pre_request->eph_user_id);
+    OPENSSL_free(pre_request->gcm_key);
+    OPENSSL_free(pre_request);
 }
 
 void free_reg_indication(struct reg_indication *reg_indication) {
@@ -86,6 +76,9 @@ void free_reg_indication(struct reg_indication *reg_indication) {
         return;
     }
     OPENSSL_free(reg_indication->eph_user_id);
+    OPENSSL_free(reg_indication->user_name);
+    OPENSSL_free(reg_indication->user_display_name);
+    OPENSSL_free(reg_indication->ticket);
     OPENSSL_free(reg_indication);
 }
 

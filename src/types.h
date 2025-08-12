@@ -42,12 +42,10 @@ enum fido_state {
     STATE_AUTH_SUCCESS,
     STATE_AUTH_FAILURE,
     STATE_REG_INITIAL,
-    STATE_PRE_REG_INDICATION_SENT,
-    STATE_PRE_REG_INDICATION_RECEIVED,
-    STATE_PRE_REG_REQUEST_SENT,
-    STATE_PRE_REG_REQUEST_RECEIVED,
-    STATE_PRE_REG_RESPONSE_SENT,
-    STATE_PRE_REG_RESPONSE_RECEIVED,
+    STATE_PRE_INDICATION_SENT,
+    STATE_PRE_INDICATION_RECEIVED,
+    STATE_PRE_REQUEST_SENT,
+    STATE_PRE_REQUEST_RECEIVED,
     STATE_REG_INDICATION_SENT,
     STATE_REG_INDICATION_RECEIVED,
     STATE_REG_REQUEST_SENT,
@@ -60,15 +58,14 @@ enum fido_state {
 
 enum packet_type {
     UNDEFINED = 0,
-    PKT_PRE_REG_INDICATION = 1,
-    PKT_PRE_REG_REQUEST = 2,
-    PKT_PRE_REG_RESPONSE = 3,
-    PKT_REG_INDICATION = 4,
-    PKT_REG_REQUEST = 5,
-    PKT_REG_RESPONSE = 6,
-    PKT_AUTH_INDICATION = 7,
-    PKT_AUTH_REQUEST = 8,
-    PKT_AUTH_RESPONSE = 9
+    PKT_PRE_INDICATION = 1,
+    PKT_PRE_REQUEST = 2,
+    PKT_REG_INDICATION = 3,
+    PKT_REG_REQUEST = 4,
+    PKT_REG_RESPONSE = 5,
+    PKT_AUTH_INDICATION = 6,
+    PKT_AUTH_REQUEST = 7,
+    PKT_AUTH_RESPONSE = 8
 };
 
 struct rp_data {
@@ -191,13 +188,15 @@ struct auth_response {
     char *clientdata_json;
     u8 *signature;
     size_t signature_len;
+
+    // Optional fields
     u8 *user_id; 
     size_t user_id_len;
     u8 *cred_id;
     size_t cred_id_len;
 };
 
-struct pre_reg_request {
+struct pre_request {
     // Required fields
     u8 * eph_user_id;
     size_t eph_user_id_len;
@@ -206,18 +205,14 @@ struct pre_reg_request {
     size_t gcm_key_len;
 };
 
-struct pre_reg_response {
-    // Required fields
-    char * user_name;
-    char * user_display_name;
-    u8 *ticket;
-    size_t ticket_len;
-};
-
 struct reg_indication {
     // Required fields
     u8 *eph_user_id;
     size_t eph_user_id_len;
+    char * user_name;
+    char * user_display_name;
+    u8 *ticket;
+    size_t ticket_len;
 };
 
 struct reg_request {
@@ -262,9 +257,7 @@ void free_auth_request(struct auth_request *auth_request);
 
 void free_auth_response(struct auth_response *auth_response);
 
-void free_pre_reg_request(struct pre_reg_request *pre_reg_request);
-
-void free_pre_reg_response(struct pre_reg_response *pre_reg_response);
+void free_pre_request(struct pre_request *pre_request);
 
 void free_reg_indication(struct reg_indication *reg_indication);
 

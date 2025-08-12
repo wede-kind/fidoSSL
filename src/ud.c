@@ -630,28 +630,17 @@ int run_ctap(struct ud_data *data, enum fido_mode mode) {
     return success ? 0 : -1;
 }
 
-int create_pre_reg_indication(struct ud_data *data, const u8 **out,
+int create_pre_indication(struct ud_data *data, const u8 **out,
                               size_t *out_len) {
-    // The pre-registration indication has no data. It is simply a signal to the
-    // server that the user device is ready to start the registration process.
-    if (cbor_build(NULL, PKT_PRE_REG_INDICATION, out, out_len) != 0) {
+    // The pre indication has no data. It is simply a signal to the
+    // server that the user device is ready to start a registration
+    // or authentication with non-discoverable credentials process.
+    if (cbor_build(NULL, PKT_PRE_INDICATION, out, out_len) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
-                     "Failed to build pre-registration indication");
+                     "Failed to build pre indication");
         return -1;
     }
     return 0;
-}
-
-int create_pre_reg_response(struct ud_data *data, SSL *ssl, const u8 **out,
-                            size_t *out_len) {
-    struct pre_reg_response packet;
-    memset(&packet, 0, sizeof(packet));
-    packet.user_name = data->user_name;
-    packet.user_display_name = data->user_display_name;
-    packet.ticket = data->ticket;
-    packet.ticket_len = data->ticket_len;
-
-    return cbor_build(&packet, PKT_PRE_REG_RESPONSE, out, out_len);
 }
 
 int create_reg_indication(struct ud_data *data, const u8 **out,
@@ -661,6 +650,10 @@ int create_reg_indication(struct ud_data *data, const u8 **out,
     memset(&packet, 0, sizeof(packet));
     packet.eph_user_id = data->eph_user_id;
     packet.eph_user_id_len = data->eph_user_id_len;
+    packet.user_name = data->user_name;
+    packet.user_display_name = data->user_display_name;
+    packet.ticket = data->ticket;
+    packet.ticket_len = data->ticket_len;
     return cbor_build(&packet, PKT_REG_INDICATION, out, out_len);
 }
 
@@ -763,22 +756,28 @@ int create_auth_response(struct ud_data *data, SSL *ssl, const u8 **out,
     packet.signature = data->signature;
     packet.signature_len = data->signature_len;
     packet.clientdata_json = data->clientdata_json;
-    packet.user_id = data->user_id;
-    packet.user_id_len = data->user_id_len;
-    packet.cred_id = data->cred_id;
-    packet.cred_id_len = data->cred_id_len;
+
+    //Optional Fields
+    if (data->user_id_len != 0 && data->user_id) {
+        packet.user_id = data->user_id;
+        packet.user_id_len = data->user_id_len;
+    }
+    if (data->cred_id_len != 0 && data->cred_id) {
+        packet.cred_id = data->cred_id;
+        packet.cred_id_len = data->cred_id_len;
+    }
 
     return cbor_build(&packet, PKT_AUTH_RESPONSE, out, out_len);
 }
 
-int process_pre_reg_request(const u8 *in, size_t in_len,
+int process_pre_request(const u8 *in, size_t in_len,
                             struct ud_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
-    struct pre_reg_request packet;
+    struct pre_request packet;
     memset(&packet, 0, sizeof(packet));
-    enum packet_type type = PKT_PRE_REG_REQUEST;
+    enum packet_type type = PKT_PRE_REQUEST;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
                      "Failed to parse pre-registration request");
@@ -850,10 +849,10 @@ int process_reg_request(const u8 *in, size_t in_len, struct ud_data *data) {
     if (packet.timeout) {
         data->timeout = packet.timeout;
     }
-    if (packet.auth_sel.resident_key != 0) {
+    if (packet.auth_sel.attachment != 0 && packet.auth_sel.resident_key != 0 &&
+        packet.auth_sel.user_verification != 0) {
+        data->auth_attach = packet.auth_sel.attachment;
         data->resident_key = packet.auth_sel.resident_key;
-    }
-    if (packet.auth_sel.user_verification != 0) {
         data->user_verification = packet.auth_sel.user_verification;
     }
     if (packet.exclude_creds_len != 0 && packet.exclude_creds) {

@@ -9,7 +9,7 @@ CC = cc
 UNAME_S := $(shell uname -s)
 
 # Using pkg-config to set flags for dependencies
-PKG_CONFIG_DEPS = libssl libfido2 tinycbor jansson sqlite3
+PKG_CONFIG_DEPS = libssl libfido2 tinycbor jansson sqlite3 openssl_keylog
 
 # Define required versions for dependencies
 LIBFIDO2_REQUIRED_VERSION := 1.14.0
@@ -17,6 +17,7 @@ OPENSSL_REQUIRED_VERSION := 3.0.2
 JANSSON_REQUIRED_VERSION := 2.14
 SQLITE_REQUIRED_VERSION := 3.37.0
 TINYCBOR_REQUIRED_VERSION := 0.6.0
+OPENSSL_KEYLOG_REQUIRED_VERSION := 1.0
 
 # Define PKG_CONFIG_PATH
 LOCAL_PKG_CONFIG_PATH := $(shell pwd)/libs/pkgconfig
@@ -101,7 +102,7 @@ pkgconfig:
 	@echo "Version: $(VERSION)" >> $(BUILDDIR)/$(NAME).pc
 	@echo "Libs: -L\$${libdir} -l$(NAME)" >> $(BUILDDIR)/$(NAME).pc
 	@echo "Cflags: -I\$${includedir}" >> $(BUILDDIR)/$(NAME).pc
-	@echo "Requires: libssl libfido2 tinycbor jansson sqlite3" >> $(BUILDDIR)/$(NAME).pc
+	@echo "Requires: libssl libfido2 tinycbor jansson sqlite3 openssl_keylog" >> $(BUILDDIR)/$(NAME).pc
 
 # Add an install target
 install: $(PROJECT_TARGET)
@@ -129,5 +130,7 @@ check-versions:
 		(echo "SQLite $(SQLITE_REQUIRED_VERSION) or higher is required" && false)
 	@$(PKG_CONFIG) --atleast-version=$(TINYCBOR_REQUIRED_VERSION) tinycbor || \
 		(echo "TinyCBOR $(TINYCBOR_REQUIRED_VERSION) or higher is required" && false)
+	@$(PKG_CONFIG) --atleast-version=$(OPENSSL_KEYLOG_REQUIRED_VERSION) openssl_keylog || \
+			(echo "openssl_keylog $(OPENSSL_KEYLOG_REQUIRED_VERSION) or higher is required" && false)
 
 .PHONY: all clean

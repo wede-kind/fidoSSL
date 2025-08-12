@@ -25,12 +25,12 @@
 #define CBOR_ATTR_PUBKEY 17
 
 #define TIMEOUT 1
-#define AUTH_SEL_ATTACHMENT 2
-#define AUTH_SEL_RESIDENT_KEY 3
-#define AUTH_SEL_USER_VERIFICATION 4
-#define EXCLUDE_CREDS 5
+#define AUTH_SEL 2
+#define EXCLUDE_CREDS 3
 #define RPID 2
 #define USER_VERIFICATION 3
+#define USER_ID 1
+#define CRED_ID 2
 
 // Buf size is limited by the TLS record size (~16KB). For the fido protocol
 // however, 128 bytes should be enough for the largest packet.
@@ -38,12 +38,10 @@
 
 const char *get_package_type_name(unsigned int type) {
     switch (type) {
-    case PKT_PRE_REG_INDICATION:
-        return "PRE_REG_INDICATION";
-    case PKT_PRE_REG_REQUEST:
-        return "PRE_REG_REQUEST";
-    case PKT_PRE_REG_RESPONSE:
-        return "PRE_REG_RESPONSE";
+    case PKT_PRE_INDICATION:
+        return "PRE_INDICATION";
+    case PKT_PRE_REQUEST:
+        return "PRE_REQUEST";
     case PKT_REG_INDICATION:
         return "REG_INDICATION";
     case PKT_REG_REQUEST:
@@ -100,16 +98,16 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
     debug_printf(DEBUG_LEVEL_VERBOSE, "Received packet: %s",
                  get_package_type_name(*type));
     switch (*type) {
-    case PKT_PRE_REG_INDICATION: {
+    case PKT_PRE_INDICATION: {
         out = NULL;
         break;
     }
-    case PKT_PRE_REG_REQUEST: {
+    case PKT_PRE_REQUEST: {
         if (array_len < 3) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Malformed pre-reg request");
+            debug_printf(DEBUG_LEVEL_ERROR, "Malformed pre request");
             goto err;
         }
-        struct pre_reg_request *p = (struct pre_reg_request *)out;
+        struct pre_request *p = (struct pre_request *)out;
         if (!p) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
             goto err;
@@ -138,17 +136,29 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                         p->gcm_key_len);
         break;
     }
-    case PKT_PRE_REG_RESPONSE: {
-        if (array_len < 4) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Malformed pre-reg response");
+    case PKT_REG_INDICATION: {
+        if (array_len < 5) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Malformed reg indication");
             goto err;
         }
-        struct pre_reg_response *p = (struct pre_reg_response *)out;
+        struct reg_indication *p = (struct reg_indication *)out;
         if (!p) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed!");
             goto err;
         }
         cbor_value_advance(&it);
+        if (!cbor_value_is_byte_string(&it)) {
+            debug_printf(DEBUG_LEVEL_ERROR,
+                         "Ephemeral user id is not a byte string");
+            goto err;
+        }
+        cbor_value_calculate_string_length(&it, &p->eph_user_id_len);
+        p->eph_user_id = OPENSSL_zalloc(p->eph_user_id_len);
+        cbor_value_copy_byte_string(&it, p->eph_user_id, &p->eph_user_id_len,
+                                    &it);
+        debug_print_hex(DEBUG_LEVEL_VERBOSE,
+                        "    eph user id: ", p->eph_user_id,
+                        p->eph_user_id_len);
         if (!cbor_value_is_text_string(&it)) {
             debug_printf(DEBUG_LEVEL_ERROR,
                          "User name value is not a text string");
@@ -178,31 +188,6 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
         cbor_value_copy_byte_string(&it, p->ticket, &p->ticket_len, &it);
         debug_print_hex(DEBUG_LEVEL_VERBOSE, "    ticket: ", p->ticket,
                         p->ticket_len);
-        break;
-    }
-    case PKT_REG_INDICATION: {
-        if (array_len < 1) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Malformed reg indication");
-            goto err;
-        }
-        struct reg_indication *p = (struct reg_indication *)out;
-        if (!p) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed!");
-            goto err;
-        }
-        cbor_value_advance(&it);
-        if (!cbor_value_is_byte_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR,
-                         "Ephemeral user id is not a byte string");
-            goto err;
-        }
-        cbor_value_calculate_string_length(&it, &p->eph_user_id_len);
-        p->eph_user_id = OPENSSL_zalloc(p->eph_user_id_len);
-        cbor_value_copy_byte_string(&it, p->eph_user_id, &p->eph_user_id_len,
-                                    &it);
-        debug_print_hex(DEBUG_LEVEL_VERBOSE,
-                        "    eph user id: ", p->eph_user_id,
-                        p->eph_user_id_len);
         break;
     }
     case PKT_REG_REQUEST: {
@@ -337,6 +322,49 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                 debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    timeout: %d ms",
                              p->timeout);
                 break;
+            case AUTH_SEL:
+                if (!cbor_value_is_array(&map_it)) {
+                    debug_printf(DEBUG_LEVEL_ERROR,
+                                 "Auth selection is not an array");
+                    goto err;
+                }
+                // TODO vielleicht Längen Check
+                cbor_value_enter_container(&map_it, &sub_it);
+                    debug_printf(DEBUG_LEVEL_VERBOSE, "    authencicator sel:");
+                if (!cbor_value_is_integer(&sub_it)) {
+                    debug_printf(DEBUG_LEVEL_ERROR,
+                                 "Auth selection attachment is not an integer");
+                    goto err;
+                }
+                int attachment;
+                cbor_value_get_int_checked(&sub_it, &attachment);
+                p->auth_sel.attachment = attachment;
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
+                             "    authenticator attachment: %s",
+                             attachment == 0 ? "PLATFORM" : "CROSS-PLATFORM");
+                if (!cbor_value_is_integer(&sub_it)) {
+                    debug_printf(
+                        DEBUG_LEVEL_ERROR,
+                        "Auth selection resident key is not an integer");
+                    goto err;
+                }
+                int resident_key;
+                cbor_value_get_int_checked(&sub_it, &resident_key);
+                p->auth_sel.resident_key = resident_key;
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    resident key: %s",
+                             get_action_policy_name(resident_key));
+                if (!cbor_value_is_integer(&sub_it)) {
+                    debug_printf(
+                        DEBUG_LEVEL_ERROR,
+                        "Auth selection user verification is not an integer");
+                    goto err;
+                }
+                int user_verification;
+                cbor_value_get_int_checked(&sub_it, &user_verification);
+                p->auth_sel.user_verification = user_verification;
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user verification: %s",
+                             get_action_policy_name(user_verification));
+                break;
             case EXCLUDE_CREDS:
                 if (!cbor_value_is_array(&map_it)) {
                     debug_printf(DEBUG_LEVEL_ERROR,
@@ -360,7 +388,7 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                     cbor_value_calculate_string_length(&sub_it, &len);
                     p->exclude_creds[i].type = OPENSSL_zalloc(len + 1);
                     cbor_value_copy_text_string(
-                        &sub_it, p->exclude_creds[i].type, &len, &sub_it);
+                            &sub_it, p->exclude_creds[i].type, &len, &sub_it);
                     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "        type: %s",
                                  p->exclude_creds[i].type);
                     if (!cbor_value_is_byte_string(&sub_it)) {
@@ -369,9 +397,9 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                         goto err;
                     }
                     cbor_value_calculate_string_length(
-                        &sub_it, &p->exclude_creds[i].id_len);
+                            &sub_it, &p->exclude_creds[i].id_len);
                     p->exclude_creds[i].id =
-                        OPENSSL_zalloc(p->exclude_creds[i].id_len);
+                            OPENSSL_zalloc(p->exclude_creds[i].id_len);
                     cbor_value_copy_byte_string(&sub_it, p->exclude_creds[i].id,
                                                 &p->exclude_creds[i].id_len,
                                                 &sub_it);
@@ -379,45 +407,6 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                                     "        id: ", p->exclude_creds[i].id,
                                     p->exclude_creds[i].id_len);
                 }
-                break;
-            case AUTH_SEL_ATTACHMENT:
-                if (!cbor_value_is_integer(&map_it)) {
-                    debug_printf(DEBUG_LEVEL_ERROR,
-                                 "Auth selection attachment is not an integer");
-                    goto err;
-                }
-                int attachment;
-                cbor_value_get_int_checked(&map_it, &attachment);
-                p->auth_sel.attachment = attachment;
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
-                             "    authenticator attachment: %s",
-                             attachment == 0 ? "PLATFORM" : "CROSS-PLATFORM");
-                break;
-            case AUTH_SEL_RESIDENT_KEY:
-                if (!cbor_value_is_integer(&map_it)) {
-                    debug_printf(
-                        DEBUG_LEVEL_ERROR,
-                        "Auth selection resident key is not an integer");
-                    goto err;
-                }
-                int resident_key;
-                cbor_value_get_int_checked(&map_it, &resident_key);
-                p->auth_sel.resident_key = resident_key;
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    resident key: %s",
-                             get_action_policy_name(resident_key));
-                break;
-            case AUTH_SEL_USER_VERIFICATION:
-                if (!cbor_value_is_integer(&map_it)) {
-                    debug_printf(
-                        DEBUG_LEVEL_ERROR,
-                        "Auth selection user verification is not an integer");
-                    goto err;
-                }
-                int user_verification;
-                cbor_value_get_int_checked(&map_it, &user_verification);
-                p->auth_sel.user_verification = user_verification;
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user verification: %s",
-                             get_action_policy_name(user_verification));
                 break;
             default:
                 // We dont error out here, because the fido spec mandates to be
@@ -544,6 +533,12 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
                              get_action_policy_name(user_verification));
                 cbor_value_advance(&map_it);
                 break;
+            default:
+                // We dont error out here, because the fido spec mandates to be
+                // graceful with unknown keys, as the spec might be extended in
+                // the future.
+                debug_printf(DEBUG_LEVEL_VERBOSE, "Unknown map key");
+                break;
             }
         }
         break;
@@ -588,24 +583,55 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
         cbor_value_copy_byte_string(&it, p->signature, &p->signature_len, &it);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    signature: ", p->signature,
                         p->signature_len);
-        if (!cbor_value_is_byte_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR, "User id is not a byte string");
+        if (cbor_value_at_end(&it)) {
+            break;
+        }
+        // Optional values
+        if (!cbor_value_is_map(&it)) {
+            debug_printf(DEBUG_LEVEL_ERROR,
+                         "Expected a map for optional values");
             goto err;
         }
-        cbor_value_calculate_string_length(&it, &p->user_id_len);
-        p->user_id = OPENSSL_zalloc(p->user_id_len);
-        cbor_value_copy_byte_string(&it, p->user_id, &p->user_id_len, &it);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    user id: ", p->user_id,
-                        p->user_id_len);
-        if (!cbor_value_is_byte_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Cred id is not a byte string");
-            goto err;
+        cbor_value_enter_container(&it, &map_it);
+        while (!cbor_value_at_end(&map_it)) {
+            int key;
+            if (!cbor_value_is_integer(&map_it)) {
+                debug_printf(DEBUG_LEVEL_ERROR, "Map key is not an integer");
+                goto err;
+            }
+            cbor_value_get_int_checked(&map_it, &key);
+            cbor_value_advance(&map_it);
+            switch (key) {
+            case USER_ID:
+                if (!cbor_value_is_byte_string(&map_it)) {
+                    debug_printf(DEBUG_LEVEL_ERROR, "User id is not a byte string");
+                    goto err;
+                }
+                cbor_value_calculate_string_length(&map_it, &p->user_id_len);
+                p->user_id = OPENSSL_zalloc(p->user_id_len);
+                cbor_value_copy_byte_string(&map_it, p->user_id, &p->user_id_len, &map_it);
+                debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    user id: ", p->user_id,
+                                p->user_id_len);
+                break;
+            case CRED_ID:
+                if (!cbor_value_is_byte_string(&map_it)) {
+                    debug_printf(DEBUG_LEVEL_ERROR, "Cred id is not a byte string");
+                    goto err;
+                }
+                cbor_value_calculate_string_length(&map_it, &p->cred_id_len);
+                p->cred_id = OPENSSL_zalloc(p->cred_id_len);
+                cbor_value_copy_byte_string(&map_it, p->cred_id, &p->cred_id_len, &map_it);
+                debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    cred id: ", p->cred_id,
+                                p->cred_id_len);
+                break;
+            default:
+                // We dont error out here, because the fido spec mandates to be
+                // graceful with unknown keys, as the spec might be extended in
+                // the future.
+                debug_printf(DEBUG_LEVEL_VERBOSE, "Unknown map key");
+                break;
+            }
         }
-        cbor_value_calculate_string_length(&it, &p->cred_id_len);
-        p->cred_id = OPENSSL_zalloc(p->cred_id_len);
-        cbor_value_copy_byte_string(&it, p->cred_id, &p->cred_id_len, &it);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    cred id: ", p->cred_id,
-                        p->cred_id_len);
         break;
     }
     default:
@@ -635,19 +661,19 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
     debug_printf(DEBUG_LEVEL_VERBOSE, "Sending packet: %s",
                  get_package_type_name(type));
     switch (type) {
-    case PKT_PRE_REG_INDICATION: {
+    case PKT_PRE_INDICATION: {
         // Encode just the packet type
         cbor_encoder_create_array(&encoder, &array, 1);
-        cbor_encode_int(&array, PKT_PRE_REG_INDICATION);
+        cbor_encode_int(&array, PKT_PRE_INDICATION);
         break;
     }
-    case PKT_PRE_REG_REQUEST: {
-        struct pre_reg_request *in = (struct pre_reg_request *)input;
+    case PKT_PRE_REQUEST: {
+        struct pre_request *in = (struct pre_reg_request *)input;
         assert(in->eph_user_id != NULL && in->eph_user_id_len != 0 &&
                in->gcm_key != NULL && in->gcm_key_len != 0);
         // Required fields are packet type, eph_user_id and gcm_key
         cbor_encoder_create_array(&encoder, &array, 3);
-        cbor_encode_int(&array, PKT_PRE_REG_REQUEST);
+        cbor_encode_int(&array, PKT_PRE_REQUEST);
         cbor_encode_byte_string(&array, in->eph_user_id, in->eph_user_id_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
                         "    eph user id: ", in->eph_user_id,
@@ -657,33 +683,23 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
                         in->gcm_key_len);
         break;
     }
-    case PKT_PRE_REG_RESPONSE: {
-        struct pre_reg_response *in = (struct pre_reg_response *)input;
-        assert(in->user_name != NULL && in->user_display_name != NULL &&
-               in->ticket != NULL && in->ticket_len != 0);
-        // Required fields are packet type, user_name, user_display_name and
-        // ticket
-        cbor_encoder_create_array(&encoder, &array, 4);
-        cbor_encode_int(&array, PKT_PRE_REG_RESPONSE);
-        cbor_encode_text_stringz(&array, in->user_name);
+    case PKT_REG_INDICATION: {
+        struct reg_indication *in = (struct reg_indication *)input;
+        assert(in->eph_user_id != NULL && in->eph_user_id_len != 0);
+        // Required fields are packet type and eph_user_id
+        cbor_encoder_create_array(&encoder, &array, 5);
+        cbor_encode_int(&array, PKT_REG_INDICATION);
+        cbor_encode_byte_string(&array, in->eph_user_id, in->eph_user_id_len);
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
+                        "    eph user id: ", in->eph_user_id,
+                        in->eph_user_id_len);
+                cbor_encode_text_stringz(&array, in->user_name);
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user name: %s", in->user_name);
         cbor_encode_text_stringz(&array, in->user_display_name);
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user display name: %s",
                      in->user_display_name);
         cbor_encode_byte_string(&array, in->ticket, in->ticket_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    ticket: ", in->ticket, in->ticket_len);
-        break;
-    }
-    case PKT_REG_INDICATION: {
-        struct reg_indication *in = (struct reg_indication *)input;
-        assert(in->eph_user_id != NULL && in->eph_user_id_len != 0);
-        // Required fields are packet type and eph_user_id
-        cbor_encoder_create_array(&encoder, &array, 2);
-        cbor_encode_int(&array, PKT_REG_INDICATION);
-        cbor_encode_byte_string(&array, in->eph_user_id, in->eph_user_id_len);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
-                        "    eph user id: ", in->eph_user_id,
-                        in->eph_user_id_len);
         break;
     }
     case PKT_REG_REQUEST: {
@@ -701,11 +717,8 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
             ++num_optionals;
         if (in->exclude_creds_len != 0)
             ++num_optionals;
-        if (in->auth_sel.attachment != 0)
-            ++num_optionals;
-        if (in->auth_sel.resident_key != 0)
-            ++num_optionals;
-        if (in->auth_sel.user_verification != 0)
+        if (in->auth_sel.attachment != 0 && in->auth_sel.resident_key != 0 &&
+            in->auth_sel.user_verification != 0)
             ++num_optionals;
 
         // Required fields are packet type, challenge, rp_id, rp_name,
@@ -758,26 +771,28 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
                 debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    timeout: %d ms",
                              in->timeout);
             }
-            if (in->auth_sel.attachment != 0) {
-                cbor_encode_int(&map, AUTH_SEL_ATTACHMENT);
-                cbor_encode_int(&map, in->auth_sel.attachment);
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
-                             "    authenticator attachment: %s",
-                             in->auth_sel.attachment == 1 ? "PLATFORM"
-                                                          : "CROSS-PLATFORM");
+            if (in->auth_sel.attachment != 0 && in->auth_sel.resident_key != 0 &&
+                in->auth_sel.user_verification != 0) {
+                cbor_encode_int(&map, AUTH_SEL);
+                //the auth_sel is an array itself
+                cbor_encoder_create_array(&map, &sub_array, 3);
+                    cbor_encode_int(&sub_array, in->auth_sel.attachment);
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
+                                 "    authenticator attachment: %s",
+                                 in->auth_sel.attachment == 1 ? "PLATFORM"
+                                                              : "CROSS-PLATFORM");
+                    cbor_encode_int(&sub_array, in->auth_sel.resident_key);
+                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    resident key: %s",
+                                 get_action_policy_name(in->auth_sel.resident_key));
+                    cbor_encode_int(&sub_array, in->auth_sel.user_verification);
+                    debug_printf(
+                            DEBUG_LEVEL_MORE_VERBOSE, "    user verification: %s",
+                            get_action_policy_name(in->auth_sel.user_verification));
             }
-            if (in->auth_sel.resident_key != 0) {
-                cbor_encode_int(&map, AUTH_SEL_RESIDENT_KEY);
-                cbor_encode_int(&map, in->auth_sel.resident_key);
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    resident key: %s",
-                             get_action_policy_name(in->auth_sel.resident_key));
-            }
-            if (in->auth_sel.user_verification != 0) {
-                cbor_encode_int(&map, AUTH_SEL_USER_VERIFICATION);
-                cbor_encode_int(&map, in->auth_sel.user_verification);
-                debug_printf(
-                    DEBUG_LEVEL_MORE_VERBOSE, "    user verification: %s",
-                    get_action_policy_name(in->auth_sel.user_verification));
+            err = cbor_encoder_close_container(&map, &sub_array);
+            if (err) {
+                debug_printf(DEBUG_LEVEL_ERROR, "Could not close CBOR array");
+                goto err;
             }
             // Excluded creds is an optional array of fields. Each item of the
             // array (if present) must contain all of the following fields:
@@ -884,12 +899,16 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         struct auth_response *in = (struct auth_response *)input;
         assert(in->authdata != NULL && in->authdata_len != 0 &&
                in->clientdata_json != NULL && in->signature != NULL &&
-               in->signature_len != 0 && in->user_id != NULL &&
-               in->user_id_len != 0 && in->cred_id != NULL &&
-               in->cred_id_len != 0);
+               in->signature_len != 0);
+        // Count optional parameters
+        size_t num_optionals =  0;
+        if (in->user_id_len != 0 && in->user_id)
+            ++num_optionals;
+        if (in->cred_id_len != 0 && in->cred_id)
+            ++num_optionals;
         // Required fields are packet type, clientdata_json, authdata, signature
-        // user_id and cred_id
-        cbor_encoder_create_array(&encoder, &array, 6);
+        // The last field of the array is a map if there are optional parameters
+        cbor_encoder_create_array(&encoder, &array, 5);
         cbor_encode_int(&array, PKT_AUTH_RESPONSE);
         cbor_encode_text_stringz(&array, in->clientdata_json);
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    clientdata: %s",
@@ -901,12 +920,26 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         cbor_encode_byte_string(&array, in->signature, in->signature_len);
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    signature: ", in->signature,
                         in->signature_len);
-        cbor_encode_byte_string(&array, in->user_id, in->user_id_len);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    user id: ", in->user_id,
+        if (num_optionals > 0) {
+            cbor_encoder_create_map(&array, &map, num_optionals);
+            if (in->user_id_len != 0 && in->user_id) {
+                cbor_encode_int(&map, USER_ID);
+                cbor_encode_byte_string(&map, in->user_id, in->user_id_len);
+                debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    user id: ", in->user_id,
                         in->user_id_len);
-        cbor_encode_byte_string(&array, in->cred_id, in->cred_id_len);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    cred id: ", in->cred_id,
+            }
+            if (in->cred_id_len != 0 && in->cred_id) {
+                cbor_encode_int(&map, CRED_ID);
+                cbor_encode_byte_string(&map, in->cred_id, in->cred_id_len);
+                debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    cred id: ", in->cred_id,
                         in->cred_id_len);
+            }
+            err = cbor_encoder_close_container(&array, &map);
+            if (err) {
+                debug_printf(DEBUG_LEVEL_ERROR, "Could not close CBOR map");
+                goto err;
+            }
+        }
         break;
     }
     default:

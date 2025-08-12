@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 int fidossl_client_add_cb(
     SSL *ssl,
@@ -36,15 +37,15 @@ int fidossl_client_add_cb(
 
         switch (data->state) {
         case STATE_REG_INITIAL:
-            if (create_pre_reg_indication(data, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration indication");
+            if (create_pre_indication(data, out, outlen) != 0) {
+                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre indication");
                 ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
                 *al = SSL_AD_INTERNAL_ERROR;
                 return -1;
             }
-            data->state = STATE_PRE_REG_INDICATION_SENT;
+            data->state = STATE_PRE_INDICATION_SENT;
             break;
-        case STATE_PRE_REG_RESPONSE_SENT:
+        case STATE_PRE_REQUEST_RECEIVED:
             if (create_reg_indication(data, out, outlen) != 0) {
                 debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create registration indication");
                 ERR_put_error(ERR_LIB_USER, 0, SSL_AD_INTERNAL_ERROR, __FILE__, __LINE__);
@@ -72,15 +73,6 @@ int fidossl_client_add_cb(
         struct ud_data *data = get_ud_data(ssl, add_arg);
 
         switch (data->state) {
-        case STATE_PRE_REG_REQUEST_RECEIVED:
-            if (create_pre_reg_response(data, ssl, out, outlen) != 0) {
-                debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration response");
-                ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
-                *al = SSL_AD_ACCESS_DENIED;
-                return -1;
-            }
-            data->state = STATE_PRE_REG_RESPONSE_SENT;
-            break;
         case STATE_REG_REQUEST_RECEIVED:
             if (create_reg_response(data, ssl, out, outlen) != 0) {
                 debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create registration response");
@@ -103,7 +95,7 @@ int fidossl_client_add_cb(
         // for the server certificate and then for the certificate request,
         // the following 3 states are ignored
         case STATE_REG_RESPONSE_SENT:
-        case STATE_PRE_REG_RESPONSE_SENT:
+        case STATE_PRE_REQUEST_RECEIVED:
         case STATE_AUTH_RESPONSE_SENT:
             return 0;
         default:
@@ -138,14 +130,16 @@ int fidossl_client_parse_cb(
         struct ud_data *data = get_ud_data(ssl, NULL);
 
         switch (data->state) {
-            case STATE_PRE_REG_INDICATION_SENT:
-                if (process_pre_reg_request(in, inlen, data) != 0) {
+            case STATE_PRE_INDICATION_SENT:
+                if (process_pre_request(in, inlen, data) != 0) {
                     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to process pre registration request");
                     ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
                     *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
-                data->state = STATE_PRE_REG_REQUEST_RECEIVED;
+                data->state = STATE_PRE_REQUEST_RECEIVED;
+                // Now, a second handshake is necessary to complete the
+                // registration.
                 break;
             case STATE_REG_INDICATION_SENT:
                 if (process_reg_request(in, inlen, data) != 0) {
@@ -204,14 +198,14 @@ int fidossl_server_add_cb(
             return 0;
         }
         switch (data->state) {
-            case STATE_PRE_REG_INDICATION_RECEIVED:
-                if (create_pre_reg_request(data, out, outlen) != 0) {
+            case STATE_PRE_INDICATION_RECEIVED:
+                if (create_pre_request(data, out, outlen) != 0) {
                     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to create pre registration request");
                     ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
                     *al = SSL_AD_ACCESS_DENIED;
                     return -1;
                 }
-                data->state = STATE_PRE_REG_REQUEST_SENT;
+                data->state = STATE_PRE_REQUEST_SENT;
                 break;
             case STATE_REG_INDICATION_RECEIVED:
                 if (create_reg_request(data, out, outlen) != 0) {
@@ -275,17 +269,6 @@ int fidossl_server_parse_cb(
     } else if (context == SSL_EXT_TLS1_3_CERTIFICATE) {
         struct rp_data *data = get_rp_data(ssl, parse_arg);
         switch (data->state) {
-            case STATE_PRE_REG_REQUEST_SENT:
-                if (process_pre_reg_response(in, inlen, data) != 0) {
-                    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse pre registration response");
-                    ERR_put_error(ERR_LIB_USER, 0, SSL_AD_ACCESS_DENIED, __FILE__, __LINE__);
-                    *al = SSL_AD_ACCESS_DENIED;
-                    return -1;
-                }
-                data->state = STATE_PRE_REG_RESPONSE_RECEIVED;
-                // Now, a second handshake is necessary to complete the
-                // registration.
-                break;
             case STATE_REG_REQUEST_SENT:
                 if (process_reg_response(in, inlen, data) != 0) {
                     debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Failed to parse registration response");
@@ -326,7 +309,23 @@ int no_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx) {
     return 1;
 }
 
+//function for logging SSL keys
+void SSL_CTX_keylog_cb_func_cb(const SSL *ssl, const char *line){
+    char  *filename = getenv("SSLKEYLOGFILE");
+	if(!filename){
+		return;
+	}
+    FILE *fp = fopen(filename, "a");
+    if (fp == NULL)
+    {
+        printf("Failed to create log file\n");
+    }
+    fprintf(fp, "%s\n", line);
+    fclose(fp);
+}    
+
 void fidossl_init_client_ctx(SSL_CTX *ctx) {
+    SSL_CTX_set_keylog_callback(ctx, SSL_CTX_keylog_cb_func_cb);
 
     // Enforce TLS 1.3
     if (!SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION)) {

@@ -40,6 +40,7 @@ int test_parse_cose_key() {
         printf("Error: hex_to_u8\n");
         return -1;
     }
+    printf("data_len: %zu\n", data_len);
     PublicKey *pk = parse_cose_key(data, data_len);
     if (pk == NULL) {
         printf("Error: parse_cose_key\n");

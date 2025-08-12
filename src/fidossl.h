@@ -76,6 +76,8 @@ void fidossl_server_free_cb(SSL *ssl, unsigned int ext_type, unsigned int contex
 
 int no_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx);
 
+void SSL_CTX_keylog_cb_func_cb(const SSL *ssl, const char *line);
+
 void fidossl_init_client_ctx(SSL_CTX *ctx);
 
 #endif /* FIDOSSL_H */

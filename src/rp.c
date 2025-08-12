@@ -240,7 +240,7 @@ PublicKey *parse_cose_key(const u8 *in, size_t in_len) {
         return NULL;
     }
     if (!cbor_value_is_map(&root)) {
-        debug_printf(DEBUG_LEVEL_ERROR, "Root container is not an map");
+        debug_printf(DEBUG_LEVEL_ERROR, "Root container is not a map");
         return NULL;
     }
     cbor_value_enter_container(&root, &map);
@@ -569,7 +569,7 @@ int verify_authdata(struct rp_data *data, struct authdata *authdata,
     return 0;
 }
 
-int create_pre_reg_request(struct rp_data *data, const u8 **out,
+int create_pre_request(struct rp_data *data, const u8 **out,
                            size_t *out_len) {
     // Create a 16 byte random ephemeral user id
     data->eph_user_id_len = 16;
@@ -588,14 +588,14 @@ int create_pre_reg_request(struct rp_data *data, const u8 **out,
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                  "Created a GCM key from random bytes");
     // Prepare the request packet
-    struct pre_reg_request packet;
-    memset(&packet, 0, sizeof(struct pre_reg_request));
+    struct pre_request packet;
+    memset(&packet, 0, sizeof(struct pre_request));
     packet.eph_user_id = data->eph_user_id;
     packet.eph_user_id_len = data->eph_user_id_len;
     packet.gcm_key = data->gcm_key;
     packet.gcm_key_len = data->gcm_key_len;
 
-    return cbor_build(&packet, PKT_PRE_REG_REQUEST, out, out_len);
+    return cbor_build(&packet, PKT_PRE_REQUEST, out, out_len);
 }
 
 int create_reg_request(struct rp_data *data, const u8 **out,
@@ -675,13 +675,9 @@ int create_reg_request(struct rp_data *data, const u8 **out,
     if (data->timeout != 0) {
         packet.timeout = data->timeout;
     }
-    if (data->auth_attach != 0) {
+    if (data->auth_attach != 0 && data->resident_key != 0 && data->user_verification != 0) {
         packet.auth_sel.attachment = data->auth_attach;
-    }
-    if (data->resident_key != 0) {
         packet.auth_sel.resident_key = data->resident_key;
-    }
-    if (data->user_verification != 0) {
         packet.auth_sel.user_verification = data->user_verification;
     }
     // Get a list of excluded credentials from the database
@@ -745,10 +741,10 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse indication");
         return -1;
     }
-    // Pre reg indication has no data. We simply set the new state
-    if (data->state == STATE_INITIAL && type == PKT_PRE_REG_INDICATION) {
-        data->state = STATE_PRE_REG_INDICATION_RECEIVED;
-    } else if (data->state == STATE_PRE_REG_RESPONSE_RECEIVED &&
+    // Pre indication has no data. We simply set the new state
+    if (data->state == STATE_INITIAL && type == PKT_PRE_INDICATION) {
+        data->state = STATE_PRE_INDICATION_RECEIVED;
+    } else if (data->state == STATE_PRE_REQUEST_SENT &&
                type == PKT_REG_INDICATION) {
         // The reg indication consists of the ephemeral user ID. We must check
         // if the client provided the correct ephemeral user id.
@@ -762,6 +758,20 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
             DEBUG_LEVEL_MORE_VERBOSE,
             "Client provided ephemeral user id matches the stored one");
         OPENSSL_free(packet.eph_user_id);
+        // Copy data by copying the pointers, we can reuse the memory
+        data->user_name = packet.user_name;
+        data->user_display_name = packet.user_display_name;
+
+        // Compare the given ticket with the one configured in the server options
+        if (data->ticket_len != packet.ticket_len ||
+            memcmp(data->ticket, packet.ticket, data->ticket_len) != 0) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Invalid Ticket");
+            return -1;
+            }
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Client provided a valid ticket");
+
+        // Free the ticket, all other data is stored in the rp_data struct
+        OPENSSL_free(packet.ticket);
         data->state = STATE_REG_INDICATION_RECEIVED;
     }
     // Again, the auth indication has no data. We simply set the state
@@ -781,37 +791,6 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
         return -1;
     }
     return 0;
-}
-
-int process_pre_reg_response(const u8 *in, size_t in_len,
-                             struct rp_data *data) {
-    if (in == NULL || in_len == 0 || data == NULL) {
-        return -1;
-    }
-    int ret = 0;
-    struct pre_reg_response packet;
-    memset(&packet, 0, sizeof(packet));
-    enum packet_type type = PKT_PRE_REG_RESPONSE;
-    if (cbor_parse(in, in_len, &type, &packet) != 0) {
-        debug_printf(DEBUG_LEVEL_ERROR,
-                     "Failed to parse pre-registration request");
-        return -1;
-    }
-    // Copy data by copying the pointers, we can reuse the memory
-    data->user_name = packet.user_name;
-    data->user_display_name = packet.user_display_name;
-
-    // Compare the given ticket with the one configured in the server options
-    if (data->ticket_len != packet.ticket_len ||
-        memcmp(data->ticket, packet.ticket, data->ticket_len) != 0) {
-        debug_printf(DEBUG_LEVEL_ERROR, "Invalid Ticket");
-        ret = -1;
-    }
-    debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Client provided a valid ticket");
-
-    // Free the ticket, all other data is stored in the rp_data struct
-    OPENSSL_free(packet.ticket);
-    return ret;
 }
 
 int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
@@ -889,7 +868,7 @@ int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     return 0;
 }
 
-int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) {
+int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) { //TODO sieht nicht ganz so optional aus
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }
