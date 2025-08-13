@@ -650,7 +650,7 @@ int create_pre_request(struct rp_data *data, const u8 **out,
     }
     debug_printf(DEBUG_LEVEL_MORE_VERBOSE,
                  "Created an ephemeral user id from random bytes");
-    // Create a 16 byte key which is used to encrypt the user id
+    // Create a 32 byte key which is used to encrypt the user id
     data->gcm_key_len = 32;
     if (create_random_bytes(data->gcm_key_len, &data->gcm_key) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to create random bytes");
@@ -829,20 +829,59 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
             DEBUG_LEVEL_MORE_VERBOSE,
             "Client provided ephemeral user id matches the stored one");
         OPENSSL_free(packet.eph_user_id);
-        // Copy data by copying the pointers, we can reuse the memory
-        data->user_name = packet.user_name;
-        data->user_display_name = packet.user_display_name;
-
+        assert(data->gcm_key != NULL);
+        assert(data->gcm_key_len != 0);
+        // Decrypt the user name
+        u8 *user_name_decrypted;
+        size_t user_name_decrypted_len;
+        if (aes_gcm_decrypt(packet.gcm_user_name, packet.gcm_user_name_len,
+                            &user_name_decrypted, &user_name_decrypted_len, data->gcm_key,
+                            data->gcm_key_len) != 0) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Failed to decrypt user name");
+            return -1;
+                            }
+        char* user_name = OPENSSL_malloc(user_name_decrypted_len + 1);
+        user_name = strcpy(user_name, (char *) user_name_decrypted);
+        user_name[user_name_decrypted_len] = '\0';
+        data->user_name = user_name;
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "decrypted user name: %s", data->user_name);
+        // Decrypt the user display name
+        u8 *user_display_name_decrypted;
+        size_t user_display_name_decrypted_len;
+        if (aes_gcm_decrypt(packet.gcm_user_display_name, packet.gcm_user_display_name_len,
+                            &user_display_name_decrypted, &user_display_name_decrypted_len, data->gcm_key,
+                            data->gcm_key_len) != 0) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Failed to decrypt user display name");
+            return -1;
+                            }
+        char* user_display_name = OPENSSL_malloc(user_name_decrypted_len + 1);
+        user_display_name = strcpy(user_name, (char *) user_name_decrypted);
+        user_display_name[user_name_decrypted_len] = '\0';
+        data->user_display_name = user_display_name;
+        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "decrypted user display name: %s", data->user_display_name);
+        // Decrypt the ticket
+        u8 *ticket_decrypted;
+        size_t ticket_decrypted_len;
+        if (aes_gcm_decrypt(packet.gcm_ticket, packet.gcm_ticket_len,
+                            &ticket_decrypted, &ticket_decrypted_len, data->gcm_key,
+                            data->gcm_key_len) != 0) {
+            debug_printf(DEBUG_LEVEL_ERROR, "Failed to decrypt ticket");
+            return -1;
+                            }
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "decrypted ticket: ", ticket_decrypted, ticket_decrypted_len);
         // Compare the given ticket with the one configured in the server options
-        if (data->ticket_len != packet.ticket_len ||
-            memcmp(data->ticket, packet.ticket, data->ticket_len) != 0) {
+        if (data->ticket_len != ticket_decrypted_len ||
+            memcmp(data->ticket, ticket_decrypted, data->ticket_len) != 0) {
             debug_printf(DEBUG_LEVEL_ERROR, "Invalid Ticket");
             return -1;
             }
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Client provided a valid ticket");
-
-        // Free the ticket, all other data is stored in the rp_data struct
-        OPENSSL_free(packet.ticket);
+        OPENSSL_free(packet.gcm_user_name);
+        OPENSSL_free(user_name_decrypted);
+        OPENSSL_free(packet.gcm_user_display_name);
+        OPENSSL_free(user_display_name_decrypted);
+        OPENSSL_free(packet.gcm_ticket);
+        OPENSSL_free(ticket_decrypted);
         data->state = STATE_REG_INDICATION_RECEIVED;
     }
     // Again, the auth indication has no data. We simply set the state

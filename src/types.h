@@ -209,10 +209,12 @@ struct reg_indication {
     // Required fields
     u8 *eph_user_id;
     size_t eph_user_id_len;
-    char * user_name;
-    char * user_display_name;
-    u8 *ticket;
-    size_t ticket_len;
+    u8 * gcm_user_name;
+    size_t gcm_user_name_len;
+    u8 *gcm_user_display_name;
+    size_t gcm_user_display_name_len;
+    u8 *gcm_ticket;
+    size_t gcm_ticket_len;
 };
 
 struct reg_request {

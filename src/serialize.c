@@ -159,35 +159,41 @@ int cbor_parse(const u8 *in_buf, size_t in_len, enum packet_type *type, void *ou
         debug_print_hex(DEBUG_LEVEL_VERBOSE,
                         "    eph user id: ", p->eph_user_id,
                         p->eph_user_id_len);
-        if (!cbor_value_is_text_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR,
-                         "User name value is not a text string");
-            goto err;
-        }
-        cbor_value_calculate_string_length(&it, &len);
-        p->user_name = OPENSSL_zalloc(len + 1); // +1 for null terminator
-        cbor_value_copy_text_string(&it, p->user_name, &len, &it);
-        debug_printf(DEBUG_LEVEL_VERBOSE, "    user name: %s", p->user_name);
-        if (!cbor_value_is_text_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR,
-                         "User display name value is not a text string");
-            goto err;
-        }
-        cbor_value_calculate_string_length(&it, &len);
-        p->user_display_name =
-            OPENSSL_zalloc(len + 1); // +1 for null terminator
-        cbor_value_copy_text_string(&it, p->user_display_name, &len, &it);
-        debug_printf(DEBUG_LEVEL_VERBOSE, "    user display name: %s",
-                     p->user_display_name);
         if (!cbor_value_is_byte_string(&it)) {
-            debug_printf(DEBUG_LEVEL_ERROR, "Ticket is not a byte string");
+            debug_printf(DEBUG_LEVEL_ERROR,
+                         "GCM user name is not a byte string");
             goto err;
         }
-        cbor_value_calculate_string_length(&it, &p->ticket_len);
-        p->ticket = OPENSSL_zalloc(p->ticket_len);
-        cbor_value_copy_byte_string(&it, p->ticket, &p->ticket_len, &it);
-        debug_print_hex(DEBUG_LEVEL_VERBOSE, "    ticket: ", p->ticket,
-                        p->ticket_len);
+        cbor_value_calculate_string_length(&it, &p->gcm_user_name_len);
+        p->gcm_user_name = OPENSSL_zalloc(p->gcm_user_name_len);
+        cbor_value_copy_byte_string(&it, p->gcm_user_name,
+                                    &p->gcm_user_name_len, &it);
+        debug_print_hex(DEBUG_LEVEL_VERBOSE,
+                        "    gcm user name: ", p->gcm_user_name,
+                        p->gcm_user_name_len);
+        if (!cbor_value_is_byte_string(&it)) {
+            debug_printf(DEBUG_LEVEL_ERROR,
+                         "GCM user display name is not a byte string");
+            goto err;
+        }
+        cbor_value_calculate_string_length(&it, &p->gcm_user_display_name_len);
+        p->gcm_user_display_name = OPENSSL_zalloc(p->gcm_user_display_name_len);
+        cbor_value_copy_byte_string(&it, p->gcm_user_display_name,
+                                    &p->gcm_user_display_name_len, &it);
+        debug_print_hex(DEBUG_LEVEL_VERBOSE,
+                        "    gcm user display name: ", p->gcm_user_display_name,
+                        p->gcm_user_display_name_len);
+        if (!cbor_value_is_byte_string(&it)) {
+            debug_printf(DEBUG_LEVEL_ERROR, "GCM ticket is not a byte string");
+            goto err;
+        }
+        cbor_value_calculate_string_length(&it, &p->gcm_ticket_len);
+        p->gcm_ticket = OPENSSL_zalloc(p->gcm_ticket_len);
+        cbor_value_copy_byte_string(&it, p->gcm_ticket, &p->gcm_ticket_len,
+                                    &it);
+        debug_print_hex(DEBUG_LEVEL_VERBOSE,
+                        "    gcm ticket: ", p->gcm_ticket,
+                        p->gcm_ticket_len);
         break;
     }
     case PKT_REG_REQUEST: {
@@ -685,7 +691,10 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
     }
     case PKT_REG_INDICATION: {
         struct reg_indication *in = (struct reg_indication *)input;
-        assert(in->eph_user_id != NULL && in->eph_user_id_len != 0);
+        assert(in->eph_user_id != NULL && in->eph_user_id_len != 0 &&
+               in->gcm_user_name != NULL && in->gcm_user_name_len != 0 &&
+               in->gcm_user_display_name != NULL && in->gcm_user_display_name_len != 0 &&
+               in->gcm_ticket != NULL && in->gcm_ticket_len != 0);
         // Required fields are packet type and eph_user_id
         cbor_encoder_create_array(&encoder, &array, 5);
         cbor_encode_int(&array, PKT_REG_INDICATION);
@@ -693,13 +702,20 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
                         "    eph user id: ", in->eph_user_id,
                         in->eph_user_id_len);
-                cbor_encode_text_stringz(&array, in->user_name);
-        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user name: %s", in->user_name);
-        cbor_encode_text_stringz(&array, in->user_display_name);
-        debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "    user display name: %s",
-                     in->user_display_name);
-        cbor_encode_byte_string(&array, in->ticket, in->ticket_len);
-        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    ticket: ", in->ticket, in->ticket_len);
+        cbor_encode_byte_string(&array, in->gcm_user_name,
+                          in->gcm_user_name_len);
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
+                        "    gcm user name: ", in->gcm_user_name,
+                        in->gcm_user_name_len);
+        cbor_encode_byte_string(&array, in->gcm_user_display_name,
+                                in->gcm_user_display_name_len);
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE, "    gcm user display name: ",
+                        in->gcm_user_display_name,
+                        in->gcm_user_display_name_len);
+        cbor_encode_byte_string(&array, in->gcm_ticket, in->gcm_ticket_len);
+        debug_print_hex(DEBUG_LEVEL_MORE_VERBOSE,
+                        "    gcm ticket: ", in->gcm_ticket,
+                        in->gcm_ticket_len);
         break;
     }
     case PKT_REG_REQUEST: {

@@ -655,10 +655,29 @@ int create_reg_indication(struct ud_data *data, const u8 **out,
     memset(&packet, 0, sizeof(packet));
     packet.eph_user_id = data->eph_user_id;
     packet.eph_user_id_len = data->eph_user_id_len;
-    packet.user_name = data->user_name;
-    packet.user_display_name = data->user_display_name;
-    packet.ticket = data->ticket;
-    packet.ticket_len = data->ticket_len;
+
+    // User name, user display name and user ticket are encrypted with the AES-GCM
+    // key.
+    if (aes_gcm_encrypt((u8 *)data->user_name, strlen(data->user_name),
+                    &packet.gcm_user_name, &packet.gcm_user_name_len,
+                    data->gcm_key, data->gcm_key_len) != 0) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to aes-gcm encrypt user name");
+        return -1;
+                    }
+    if (aes_gcm_encrypt(
+            (u8 *)data->user_display_name, strlen(data->user_display_name),
+            &packet.gcm_user_display_name, &packet.gcm_user_display_name_len,
+            data->gcm_key, data->gcm_key_len) != 0) {
+        debug_printf(DEBUG_LEVEL_ERROR,
+                     "Failed to aes-gcm encrypt user display name");
+        return -1;
+            }
+    if (aes_gcm_encrypt(data->ticket, data->ticket_len, &packet.gcm_ticket,
+                        &packet.gcm_ticket_len, data->gcm_key,
+                        data->gcm_key_len) != 0) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to aes-gcm encrypt user id");
+        return -1;
+                        }
     return cbor_build(&packet, PKT_REG_INDICATION, out, out_len);
 }
 
