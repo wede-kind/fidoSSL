@@ -137,7 +137,7 @@ struct rp_data *get_rp_data(SSL *ssl, void *server_opts) {
 }
 
 // Extract authData from a CBOR-encoded attestation object
-// Returns 0 on success, -1 on failure
+// Returns 0 on success, -1 on failure, 1 when
 int extract_authdata_from_attobj(const uint8_t *attObjBuf, const size_t attObjLen,
                                  uint8_t **authDataPtr, size_t *authDataLen) {
     CborParser parser;
@@ -187,7 +187,7 @@ int extract_authdata_from_attobj(const uint8_t *attObjBuf, const size_t attObjLe
                 return -1;
             }
             *authDataPtr = OPENSSL_malloc(*authDataLen);
-            err = cbor_value_copy_byte_string(&mapIt, *authDataPtr, authDataLen, nullptr);
+            err = cbor_value_copy_byte_string(&mapIt, *authDataPtr, authDataLen, NULL);
             if (err != CborNoError) {
                 fprintf(stderr, "cbor_value_copy_byte_string()");
                 return -1;
@@ -206,16 +206,12 @@ int extract_authdata_from_attobj(const uint8_t *attObjBuf, const size_t attObjLe
     return -1;  // authData not found
 }
 
-struct authdata *parse_authdata(const u8 *data, size_t data_len) {
+struct authdata *parse_authdata(const u8 *authDataBytes, size_t authDataBytesLen) {
     // Authdata has a fixed structure, so we can parse it without a CBOR
     // library. See: https://www.w3.org/TR/webauthn-2/#authenticator-data
-    if (data == NULL || data_len == 0) {
+    if (authDataBytes == NULL || authDataBytesLen == 0) {
         return NULL;
     }
-
-    uint8_t *authDataBytes = nullptr;
-    size_t authDataBytesLen = 0;
-    extract_authdata_from_attobj(data, data_len, &authDataBytes, &authDataBytesLen);
 
     struct authdata *ad = OPENSSL_malloc(sizeof(struct authdata));
     if (ad == NULL) {
@@ -278,7 +274,7 @@ struct authdata *parse_authdata(const u8 *data, size_t data_len) {
         if (ad->pubkey == NULL) {
             debug_printf(DEBUG_LEVEL_ERROR, "Memory allocation failed");
             free_authdata(ad);
-            return nullptr;
+            return NULL;
         }
         memcpy(ad->pubkey, authDataBytes + offset, ad->pubkey_len);
         offset += ad->pubkey_len;
@@ -887,7 +883,13 @@ int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     }
 
     // Parse authdata
-    struct authdata *ad = parse_authdata(packet.authdata, packet.authdata_len);
+    uint8_t *authDataBytes = NULL;
+    size_t authDataBytesLen = 0;
+    if (extract_authdata_from_attobj(packet.authdata, packet.authdata_len, &authDataBytes, &authDataBytesLen) != 0) {
+        debug_printf(DEBUG_LEVEL_ERROR, "Failed to extract authdata from attestation object");
+        return -1;
+    }
+    struct authdata *ad = parse_authdata(authDataBytes, authDataBytesLen);
     if (ad == NULL) {
         debug_printf(DEBUG_LEVEL_ERROR, "Failed to parse authdata");
         return -1;
@@ -943,7 +945,7 @@ int process_reg_response(const u8 *in, size_t in_len, struct rp_data *data) {
     return 0;
 }
 
-int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) { //TODO sieht nicht ganz so optional aus
+int process_auth_response(const u8 *in, size_t in_len, struct rp_data *data) {
     if (in == NULL || in_len == 0 || data == NULL) {
         return -1;
     }

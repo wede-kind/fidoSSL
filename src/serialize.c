@@ -668,7 +668,7 @@ int cbor_build(const void *input, enum packet_type type, const u8 **out_buf,
         break;
     }
     case PKT_PRE_REQUEST: {
-        struct pre_request *in = (struct pre_reg_request *)input;
+        struct pre_request *in = (struct pre_request *)input;
         assert(in->eph_user_id != NULL && in->eph_user_id_len != 0 &&
                in->gcm_key != NULL && in->gcm_key_len != 0);
         // Required fields are packet type, eph_user_id and gcm_key

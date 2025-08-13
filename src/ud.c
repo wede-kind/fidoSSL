@@ -590,7 +590,7 @@ int run_ctap(struct ud_data *data, enum fido_mode mode) {
         // According to the WebAuthn and your own master thesis the attestation object is required
         size_t attobj_len;
         unsigned char *attobj = cbor_build_attestation_object(cred_t, &attobj_len);
-        if (attobj == nullptr) {
+        if (attobj == NULL) {
             fprintf(stderr, "Could not build attestation object");
             return -1;
         }
@@ -785,7 +785,7 @@ int process_pre_request(const u8 *in, size_t in_len,
     enum packet_type type = PKT_PRE_REQUEST;
     if (cbor_parse(in, in_len, &type, &packet) != 0) {
         debug_printf(DEBUG_LEVEL_ERROR,
-                     "Failed to parse pre-registration request");
+                     "Failed to parse pre request");
         return -1;
     }
     // Copy pointers. We can reuse the allocated memory.
