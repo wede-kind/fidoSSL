@@ -7,7 +7,7 @@ void free_rp_data(struct rp_data *rp_data) {
     OPENSSL_free(rp_data->rp_name);
     OPENSSL_free(rp_data->user_id);
     OPENSSL_free(rp_data->user_name);
-    //OPENSSL_free(rp_data->user_display_name);
+    OPENSSL_free(rp_data->user_display_name);
     OPENSSL_free(rp_data->eph_user_id);
     OPENSSL_free(rp_data->gcm_key);
     OPENSSL_free(rp_data->ticket);

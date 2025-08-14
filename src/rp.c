@@ -828,7 +828,6 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
         debug_printf(
             DEBUG_LEVEL_MORE_VERBOSE,
             "Client provided ephemeral user id matches the stored one");
-        OPENSSL_free(packet.eph_user_id);
         assert(data->gcm_key != NULL);
         assert(data->gcm_key_len != 0);
         // Decrypt the user name
@@ -854,9 +853,9 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
             debug_printf(DEBUG_LEVEL_ERROR, "Failed to decrypt user display name");
             return -1;
                             }
-        char* user_display_name = OPENSSL_malloc(user_name_decrypted_len + 1);
-        user_display_name = strcpy(user_name, (char *) user_name_decrypted);
-        user_display_name[user_name_decrypted_len] = '\0';
+        char* user_display_name = OPENSSL_malloc(user_display_name_decrypted_len + 1);
+        user_display_name = strcpy(user_display_name, (char *) user_display_name_decrypted);
+        user_display_name[user_display_name_decrypted_len] = '\0';
         data->user_display_name = user_display_name;
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "decrypted user display name: %s", data->user_display_name);
         // Decrypt the ticket
@@ -876,6 +875,9 @@ int process_indication(const u8 *in, size_t in_len, struct rp_data *data) {
             return -1;
             }
         debug_printf(DEBUG_LEVEL_MORE_VERBOSE, "Client provided a valid ticket");
+
+        //cleanup
+        OPENSSL_free(packet.eph_user_id);
         OPENSSL_free(packet.gcm_user_name);
         OPENSSL_free(user_name_decrypted);
         OPENSSL_free(packet.gcm_user_display_name);
