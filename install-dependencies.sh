@@ -251,50 +251,12 @@ EOF
     fi
 }
 
-#################### openssl-keylog ####################
-
-build_openssl_keylog() {
-    OPENSSL_KEYLOG_URL="https://github.com/wpbrown/openssl-keylog/archive/refs/heads/main.zip"
-    OPENSSL_KEYLOG_DIR="${LIBS_DIR}/openssl_keylog"
-
-    if [ ! -d "${OPENSSL_KEYLOG_DIR}" ]; then
-            echo "Downloading openssl_keylog"
-            curl -L -o "${LIBS_DIR}/openssl-keylog.zip" "${OPENSSL_KEYLOG_URL}"
-
-            echo "Extracting openssl_keylog..."
-            unzip "${LIBS_DIR}/openssl-keylog.zip" -d "${LIBS_DIR}"
-            rm "${LIBS_DIR}/openssl-keylog.zip"
-            mv "${LIBS_DIR}/openssl-keylog-main" "${OPENSSL_KEYLOG_DIR}"
-
-            echo "Building openssl_keylog..."
-            pushd "${OPENSSL_KEYLOG_DIR}" > /dev/null
-            make
-            popd > /dev/null
-
-        # Generate the pkg-config files
-    cat <<EOF > "${PKGCONFIG_DIR}/openssl_keylog.pc"
-prefix=${PROJECT_ROOT}
-exec_prefix=\${prefix}
-libdir=\${exec_prefix}/libs/openssl_keylog
-includedir=\${prefix}/libs/openssl_keylog/include
-
-Name: openssl_keylog
-Description: Adds SSLKEYLOGFILE support to any dynamically linked app using OpenSSL 1.1.1+
-Version: 1.0
-Libs: -L\${libdir} -lsslkeylog
-Cflags: -I\${includedir}
-EOF
-    fi
-}
-
-
 build_all() {
     build_sqlite
     build_tinycbor
     build_libfido
     build_jansson
     build_openssl
-    build_openssl_keylog
 }
 
 if [[ $# -eq 0 ]]; then
@@ -328,11 +290,8 @@ for arg in "$@"; do
         sqlite3)
             build_sqlite
             ;;
-        openssl_keylog)
-            build_openssl_keylog
-            ;;
         *)
-            echo "Invalid argument: $arg. Accepted values: openssl, libfido2, tinycbor, jansson, sqlite3, openssl_keylog all."
+            echo "Invalid argument: $arg. Accepted values: openssl, libfido2, tinycbor, jansson, sqlite3, all."
             ;;
     esac
 done
